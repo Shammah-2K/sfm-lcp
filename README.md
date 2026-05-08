@@ -11,7 +11,7 @@
 
 ## About
 
-SFM-LCP is the final-year project of Shammah King Kausa, BSc Computer Science student at **ZCAS University, Lusaka, Zambia** (Academic Year 2026).
+SFM-LCP is the final-year project of Shammah King Kausa, BSc Computer Science student at **ZCAS University, Lusaka, Zambia** (Academic Year 2026/2027).
 
 The project addresses the financial-management gap in Zambia's informal economy. Small and Medium Enterprises and market traders account for approximately 70% of national employment, yet most operate without systematic financial records. They rely on memory and informal bookkeeping, which leads to poor business decisions, inability to access credit, and weak tax compliance. Mobile money penetration above 60% of adults provides a familiar payment rail that can be extended into a full bookkeeping experience. SFM-LCP packages bookkeeping, basic Point-of-Sale, MTN Mobile Money receipt integration, and two on-device machine-learning features into a single offline-capable Android application designed for low-end devices and intermittent connectivity.
 
@@ -100,7 +100,10 @@ Project phase documents, design decisions, and dissertation drafts are in [`docs
 **Shammah King Kausa**
 BSc Computer Science, ZCAS University
 Lusaka, Zambia
-shammahk1usa@gmail.com · https://github.com/Shammah-2K · www.linkedin.com/in/shammah-kausa-0a81042b2
+
+- GitHub: [Shammah-2K](https://github.com/Shammah-2K)
+- LinkedIn: [shammah-kausa](https://www.linkedin.com/in/shammah-kausa-0a81042b2)
+- Email: shammahk1usa [at] gmail [dot] com
 
 ## Acknowledgements
 
