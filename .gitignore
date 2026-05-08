@@ -8,112 +8,132 @@
 .history
 
 
+# ---------- Flutter / Dart ----------
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/.pub-cache/
+mobile/.pub/
+mobile/build/
+mobile/**/build/
+mobile/**/.flutter-plugins
+mobile/**/.flutter-plugins-dependencies
+mobile/**/.packages
+mobile/**/.pub-cache/
+mobile/**/.pub/
+mobile/**/generated_plugin_registrant.dart
 
-# Flutter repo-specific
-/bin/cache/
-/bin/internal/bootstrap.bat
-/bin/internal/bootstrap.sh
-/bin/mingit/
-/dev/benchmarks/mega_gallery/
-/dev/bots/.recipe_deps
-/dev/bots/android_tools/
-/dev/devicelab/ABresults*.json
-/dev/docs/doc/
-/dev/docs/flutter.docs.zip
-/dev/docs/lib/
-/dev/docs/pubspec.yaml
-/dev/integration_tests/**/xcuserdata
-/dev/integration_tests/**/Pods
-/packages/flutter/coverage/
-version
-analysis_benchmark.json
+# Android-specific (under mobile/android)
+mobile/android/**/gradle-wrapper.jar
+mobile/android/.gradle
+mobile/android/captures/
+mobile/android/gradlew
+mobile/android/gradlew.bat
+mobile/android/local.properties
+mobile/android/**/GeneratedPluginRegistrant.java
+mobile/android/key.properties
+mobile/android/app/release/
+mobile/android/app/debug/
+mobile/android/app/profile/
+mobile/android/app/*.jks
+mobile/android/app/*.keystore
 
-# packages file containing multi-root paths
-.packages.generated
+# iOS-specific (in case you ever build for iOS)
+mobile/ios/**/dgph
+mobile/ios/**/xcuserdata
+mobile/ios/**/.symlinks/
+mobile/ios/**/Flutter/App.framework
+mobile/ios/**/Flutter/Flutter.framework
+mobile/ios/**/Flutter/Flutter.podspec
+mobile/ios/**/Flutter/Generated.xcconfig
+mobile/ios/**/Flutter/app.flx
+mobile/ios/**/Flutter/app.zip
+mobile/ios/**/Flutter/flutter_assets/
+mobile/ios/**/Flutter/flutter_export_environment.sh
+mobile/ios/**/ServiceDefinitions.json
+mobile/ios/**/Runner/GeneratedPluginRegistrant.*
+mobile/ios/Pods/
+mobile/ios/.symlinks/
 
-# Flutter/Dart/Pub related
-**/doc/api/
-.dart_tool/
-.flutter-plugins
-.flutter-plugins-dependencies
-**/generated_plugin_registrant.dart
-.packages
-.pub-preload-cache/
-.pub/
-build/
-flutter_*.png
-linked_*.ds
-unlinked.ds
-unlinked_spec.ds
+# Drift / generated code
+mobile/lib/**/*.g.dart
+mobile/lib/**/*.freezed.dart
 
-# Android related
-**/android/**/gradle-wrapper.jar
-.gradle/
-**/android/captures/
-**/android/gradlew
-**/android/gradlew.bat
-**/android/local.properties
-**/android/**/GeneratedPluginRegistrant.java
-**/android/key.properties
-*.jks
+# ---------- Node.js / TypeScript ----------
+backend/node_modules/
+backend/dist/
+backend/build/
+backend/coverage/
+backend/.tsbuildinfo
+backend/npm-debug.log*
+backend/yarn-debug.log*
+backend/yarn-error.log*
+backend/.npm
+backend/.eslintcache
 
-# iOS/XCode related
-**/ios/**/*.mode1v3
-**/ios/**/*.mode2v3
-**/ios/**/*.moved-aside
-**/ios/**/*.pbxuser
-**/ios/**/*.perspectivev3
-**/ios/**/*sync/
-**/ios/**/.sconsign.dblite
-**/ios/**/.tags*
-**/ios/**/.vagrant/
-**/ios/**/DerivedData/
-**/ios/**/Icon?
-**/ios/**/Pods/
-**/ios/**/.symlinks/
-**/ios/**/profile
-**/ios/**/xcuserdata
-**/ios/.generated/
-**/ios/Flutter/.last_build_id
-**/ios/Flutter/App.framework
-**/ios/Flutter/Flutter.framework
-**/ios/Flutter/Flutter.podspec
-**/ios/Flutter/Generated.xcconfig
-**/ios/Flutter/ephemeral
-**/ios/Flutter/app.flx
-**/ios/Flutter/app.zip
-**/ios/Flutter/flutter_assets/
-**/ios/Flutter/flutter_export_environment.sh
-**/ios/ServiceDefinitions.json
-**/ios/Runner/GeneratedPluginRegistrant.*
+# ---------- Python / ML ----------
+ml/__pycache__/
+ml/**/__pycache__/
+ml/*.py[cod]
+ml/**/*.py[cod]
+ml/.ipynb_checkpoints/
+ml/**/.ipynb_checkpoints/
+ml/.venv/
+ml/venv/
+ml/env/
+ml/.pytest_cache/
+ml/**/.pytest_cache/
+ml/.mypy_cache/
+ml/.ruff_cache/
 
-# macOS
-**/Flutter/ephemeral/
-**/Pods/
-**/macos/Flutter/GeneratedPluginRegistrant.swift
-**/macos/Flutter/ephemeral
-**/xcuserdata/
+# Trained model artifacts and large data files
+ml/models/*.bin
+ml/models/*.pkl
+ml/models/*.joblib
+ml/models/*.onnx
+ml/data/raw/
+ml/data/interim/
+# (keep ml/data/processed/ tracked if datasets are small; ignore if >10MB)
 
-# Windows
-**/windows/flutter/generated_plugin_registrant.cc
-**/windows/flutter/generated_plugin_registrant.h
-**/windows/flutter/generated_plugins.cmake
+# ---------- Environment / Secrets  ----------
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+**/secrets.json
+**/firebase-service-account*.json
+**/google-services.json
+**/GoogleService-Info.plist
 
-# Linux
-**/linux/flutter/generated_plugin_registrant.cc
-**/linux/flutter/generated_plugin_registrant.h
-**/linux/flutter/generated_plugins.cmake
+# ---------- IDEs / Editors ----------
+.vscode/
+!.vscode/settings.json.example
+!.vscode/extensions.json
+.idea/
+*.iml
+*.ipr
+*.iws
+.history/
+*.swp
+*.swo
 
-# Coverage
-coverage/
+# ---------- OS noise ----------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
 
-# Symbols
-app.*.symbols
-
-# Exceptions to above rules.
-!**/ios/**/default.mode1v3
-!**/ios/**/default.mode2v3
-!**/ios/**/default.pbxuser
-!**/ios/**/default.perspectivev3
-!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-!/dev/ci/**/Gemfile.lock
+# ---------- Logs / temp ----------
+*.log
+logs/
+tmp/
+temp/
