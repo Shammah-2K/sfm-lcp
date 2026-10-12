@@ -24,3 +24,11 @@ Choices made during the build that `BUILD_PROTOTYPE.md` does not specify, one pe
 - Amount parsing accepts a trailing point ("25." = K25.00), a leading point (".5" = K0.50) and leading zeros, and rejects anything with more than seven whole-kwacha digits before converting.
 - `recordSale` stores `sales_goods` when no final category is passed; it never promotes an unconfirmed suggestion to the final category.
 - `watchRecent` breaks ties on equal `created_at` by `rowid`, so two saves in the same millisecond still list newest first.
+- Generated `lib/data/database.g.dart` is committed, so a clean clone builds and tests without running build_runner first.
+- Navigation uses plain `Navigator` routes (Home -> Sale/Expense -> back), so no routing package is added.
+- The sale description hint is "What was sold?"; the expense hint is "What was it for?" as specified.
+- A user's explicit category tap or "Other" pick always wins over later suggestions while the description is edited.
+- On Save the description is scored once more, so the stored `predicted_category` always belongs to the stored text; if that re-score is no longer confident and the user had not picked a category, the save waits for a pick.
+- A save rejected by the database shows a short "Not saved" message and keeps the form.
+- Amounts on Home show a sign (+ sale, − expense) next to the green/red colour, so the type does not rely on colour alone.
+- Widget tests also check for layout overflow at 1.3x text on a 360x640 screen for Home and both entry screens.
