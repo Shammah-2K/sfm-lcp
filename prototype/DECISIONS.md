@@ -13,3 +13,6 @@ Choices made during the build that `BUILD_PROTOTYPE.md` does not specify, one pe
 - Parity cases: 200 sampled corpus rows, 80 new typo variants absent from the corpus (seed 7), and 20 hand-written edge cases.
 - The model JSON keeps full float64 precision (about 0.97 MB) instead of rounding, so parity is not limited by export precision.
 - `requirements.txt` pins the exact versions used (scikit-learn 1.9.1, numpy 2.5.4, Python 3.14.8).
+- `prototype/.gitattributes` forces LF line endings so `corpus.csv` stays byte-identical to a fresh `make_corpus.py` run on Windows checkouts.
+- The category codebook lives once in `lib/domain/categories.dart` and feeds both the database seed and the categoriser's income/expense restriction.
+- The model JSON is parsed with `Isolate.run` at startup so the ~1 MB decode does not block the first frame.
