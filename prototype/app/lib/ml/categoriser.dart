@@ -7,6 +7,13 @@ import 'package:flutter/services.dart';
 
 import '../domain/categories.dart';
 
+/// JSON numbers arrive as int or double; the model needs doubles.
+double _asDouble(Object? value) => switch (value) {
+  final double d => d,
+  final int i => i + 0.0,
+  _ => throw FormatException('expected a number', value),
+};
+
 const String categoriserAsset = 'assets/models/categoriser_model.json';
 
 class ScoredCategory {
@@ -68,12 +75,12 @@ class Categoriser {
       );
     }
     Float64List floats(Object? list) => Float64List.fromList(
-      (list! as List<dynamic>).map((v) => (v as num).toDouble()).toList(),
+      (list! as List<dynamic>).map((v) => _asDouble(v)).toList(),
     );
     return Categoriser._(
       modelVersion: json['model_version'] as String,
       classes: List<String>.unmodifiable(json['classes'] as List<dynamic>),
-      confidenceCutoff: (json['confidence_cutoff'] as num).toDouble(),
+      confidenceCutoff: _asDouble(json['confidence_cutoff']),
       ngramMin: json['ngram_min'] as int,
       ngramMax: json['ngram_max'] as int,
       sublinearTf: json['sublinear_tf'] as bool,
@@ -138,7 +145,7 @@ class Categoriser {
     final weights = <int, double>{};
     var sumSquares = 0.0;
     counts.forEach((index, count) {
-      final tf = _sublinearTf ? 1 + math.log(count) : count.toDouble();
+      final tf = _sublinearTf ? 1 + math.log(count) : count + 0.0;
       final w = tf * _idf[index];
       weights[index] = w;
       sumSquares += w * w;

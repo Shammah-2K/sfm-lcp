@@ -32,3 +32,7 @@ Choices made during the build that `BUILD_PROTOTYPE.md` does not specify, one pe
 - A save rejected by the database shows a short "Not saved" message and keeps the form.
 - Amounts on Home show a sign (+ sale, − expense) next to the green/red colour, so the type does not rely on colour alone.
 - Widget tests also check for layout overflow at 1.3x text on a 360x640 screen for Home and both entry screens.
+- The release APK is signed with the debug key from the Flutter template; enough for `adb install`, not for distribution.
+- Section 13's literal grep also matches identifiers, so `_toDomain` is named `_asEntry` and JSON numbers become doubles with `int + 0.0` instead of `toDouble()`.
+- The README's database query targets a debug build: `run-as` refuses release builds and the emulator image has no `sqlite3`, so the file is copied off with `adb exec-out` and queried with Python.
+- End-to-end verification used the API 36.1 x86_64 emulator in airplane mode; no physical phone was available during the build.

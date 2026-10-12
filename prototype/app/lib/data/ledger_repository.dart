@@ -83,7 +83,7 @@ class LedgerRepository {
       final saved = await (_db.select(
         _db.ledgerEntry,
       )..where((e) => e.id.equals(id))).getSingle();
-      return _toDomain(saved);
+      return _asEntry(saved);
     });
   }
 
@@ -99,7 +99,7 @@ class LedgerRepository {
     return query.watch().map(
       (rows) => [
         for (final row in rows)
-          EntryView(_toDomain(row), categoryByCode[row.finalCategory]!),
+          EntryView(_asEntry(row), categoryByCode[row.finalCategory]!),
       ],
     );
   }
@@ -113,7 +113,7 @@ class LedgerRepository {
     return query.map((row) => row.read(count)!).watchSingle();
   }
 
-  static LedgerEntry _toDomain(LedgerEntryData row) => LedgerEntry(
+  static LedgerEntry _asEntry(LedgerEntryData row) => LedgerEntry(
     id: row.id!,
     businessId: row.businessId,
     entryType: EntryType.parse(row.entryType),
