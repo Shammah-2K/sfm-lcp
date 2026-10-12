@@ -1,0 +1,19 @@
+name: sfm_lcp_prototype
+description: "SFM-LCP throwaway prototype: offline sale and expense recording with on-device category suggestion."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.11.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
