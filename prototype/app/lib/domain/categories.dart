@@ -12,8 +12,8 @@ enum CategoryKind {
       CategoryKind.values.firstWhere((k) => k.name == value);
 }
 
-class Category {
-  const Category({
+class CategoryDef {
+  const CategoryDef({
     required this.code,
     required this.name,
     required this.kind,
@@ -32,78 +32,78 @@ class Category {
 
 const String defaultSaleCategory = 'sales_goods';
 
-const List<Category> codebook = [
-  Category(
+const List<CategoryDef> codebook = [
+  CategoryDef(
     code: 'sales_goods',
     name: 'Sales of goods',
     kind: CategoryKind.income,
     icon: 'shopping_basket',
     sortOrder: 1,
   ),
-  Category(
+  CategoryDef(
     code: 'sales_service',
     name: 'Service income',
     kind: CategoryKind.income,
     icon: 'handyman',
     sortOrder: 2,
   ),
-  Category(
+  CategoryDef(
     code: 'other_income',
     name: 'Other income',
     kind: CategoryKind.income,
     icon: 'savings',
     sortOrder: 3,
   ),
-  Category(
+  CategoryDef(
     code: 'stock',
     name: 'Stock purchase',
     kind: CategoryKind.expense,
     icon: 'inventory_2',
     sortOrder: 4,
   ),
-  Category(
+  CategoryDef(
     code: 'transport',
     name: 'Transport',
     kind: CategoryKind.expense,
     icon: 'directions_bus',
     sortOrder: 5,
   ),
-  Category(
+  CategoryDef(
     code: 'airtime',
     name: 'Airtime & data',
     kind: CategoryKind.expense,
     icon: 'phone_android',
     sortOrder: 6,
   ),
-  Category(
+  CategoryDef(
     code: 'rent_levy',
     name: 'Rent & market fees',
     kind: CategoryKind.expense,
     icon: 'storefront',
     sortOrder: 7,
   ),
-  Category(
+  CategoryDef(
     code: 'utilities',
     name: 'Electricity & water',
     kind: CategoryKind.expense,
     icon: 'bolt',
     sortOrder: 8,
   ),
-  Category(
+  CategoryDef(
     code: 'wages',
     name: 'Wages',
     kind: CategoryKind.expense,
     icon: 'groups',
     sortOrder: 9,
   ),
-  Category(
+  CategoryDef(
     code: 'food',
     name: 'Meals',
     kind: CategoryKind.expense,
     icon: 'restaurant',
     sortOrder: 10,
   ),
-  Category(
+  CategoryDef(
     code: 'other_expense',
     name: 'Other expense',
     kind: CategoryKind.expense,
@@ -112,9 +112,9 @@ const List<Category> codebook = [
   ),
 ];
 
-final Map<String, Category> categoryByCode = {
+final Map<String, CategoryDef> categoryByCode = {
   for (final c in codebook) c.code: c,
 };
 
-List<Category> categoriesOfKind(CategoryKind kind) =>
+List<CategoryDef> categoriesOfKind(CategoryKind kind) =>
     codebook.where((c) => c.kind == kind).toList(growable: false);

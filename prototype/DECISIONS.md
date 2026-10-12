@@ -16,3 +16,11 @@ Choices made during the build that `BUILD_PROTOTYPE.md` does not specify, one pe
 - `prototype/.gitattributes` forces LF line endings so `corpus.csv` stays byte-identical to a fresh `make_corpus.py` run on Windows checkouts.
 - The category codebook lives once in `lib/domain/categories.dart` and feeds both the database seed and the categoriser's income/expense restriction.
 - The model JSON is parsed with `Isolate.run` at startup so the ~1 MB decode does not block the first frame.
+- Drift is pinned to 2.34.x (drift_dev 2.34.0) because newer drift_dev needs `meta` ^1.18, which the installed Flutter 3.41.5 SDK pins to 1.17.0.
+- `schema.drift` differs from `schema.sql` only in comments and the PRAGMA line: drift_dev 2.34 fails to parse a `CREATE TABLE` that follows a line comment ending in a colon ("-- Conventions:"), so that colon is dropped. Every table, index, trigger and view is accepted by drift_dev, so no statement runs through `customStatement`.
+- Drift types the `TEXT PRIMARY KEY` columns as nullable (SQLite allows NULL there without NOT NULL); the schema is kept verbatim and the Dart code unwraps ids it has just generated.
+- Drift's generated `Category` and `LedgerEntry` classes would clash with domain names, so the codebook class is `CategoryDef` and data-layer files import `database.dart` with `hide LedgerEntry`.
+- `Session` returns a small `Participant` (business id + code) instead of Drift's `BusinessData`.
+- Amount parsing accepts a trailing point ("25." = K25.00), a leading point (".5" = K0.50) and leading zeros, and rejects anything with more than seven whole-kwacha digits before converting.
+- `recordSale` stores `sales_goods` when no final category is passed; it never promotes an unconfirmed suggestion to the final category.
+- `watchRecent` breaks ties on equal `created_at` by `rowid`, so two saves in the same millisecond still list newest first.
