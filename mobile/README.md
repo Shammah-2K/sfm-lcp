@@ -94,6 +94,6 @@ The widget tests drive each flow on the preview data. They also scroll every scr
 
 ## Fonts
 
-The brief specifies Atkinson Hyperlegible. Until its font files are added under `assets/fonts/`,
-the app uses Roboto (Android's system font). Switching is one line: `AppText.family` in
-`lib/core/theme/tokens.dart`, plus the `fonts:` entry in `pubspec.yaml`.
+The app uses Roboto, Android's system font. The brief's Atkinson Hyperlegible was tried and
+reverted (27 Oct 2026). Changing the family is one line, `AppText.family` in
+`lib/core/theme/tokens.dart`, plus a `fonts:` entry in `pubspec.yaml` for a bundled font.

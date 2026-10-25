@@ -3,14 +3,18 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-/// Loads the app's real font for every test, so the no-overflow checks measure
-/// Atkinson Hyperlegible, which is wider than the test framework's default.
+/// Loads Roboto (shipped with the Flutter SDK) for every test, so the
+/// no-overflow checks measure real text rather than the test placeholder font.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
-  Future<ByteData> file(String path) async =>
-      ByteData.sublistView(await File(path).readAsBytes());
-  await (FontLoader('AtkinsonHyperlegible')
-        ..addFont(file('assets/fonts/AtkinsonHyperlegible-Regular.ttf'))
-        ..addFont(file('assets/fonts/AtkinsonHyperlegible-Bold.ttf')))
-      .load();
+  final root = Platform.environment['FLUTTER_ROOT'];
+  if (root != null) {
+    final dir = '$root/bin/cache/artifacts/material_fonts';
+    Future<ByteData> file(String name) async =>
+        ByteData.sublistView(await File('$dir/$name').readAsBytes());
+    await (FontLoader('Roboto')
+          ..addFont(file('roboto-regular.ttf'))
+          ..addFont(file('roboto-bold.ttf')))
+        .load();
+  }
   await testMain();
 }

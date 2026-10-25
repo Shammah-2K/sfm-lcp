@@ -2,8 +2,8 @@
 //
 //   flutter test --update-goldens tool/screens
 //
-// Uses the bundled Atkinson Hyperlegible font and the Material icon font that
-// ships with the Flutter SDK, so it runs offline. The images show the preview sample data.
+// Uses the Roboto and Material icon fonts that ship with the Flutter SDK, so
+// it runs offline. The images show the preview sample data.
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -18,19 +18,17 @@ const String _out = '../../../docs/screens';
 Future<void> _loadFonts() async {
   final root = Platform.environment['FLUTTER_ROOT'];
   if (root == null) throw StateError('FLUTTER_ROOT is not set');
-  Future<ByteData> file(String path) async =>
-      ByteData.sublistView(await File(path).readAsBytes());
+  final dir = '$root/bin/cache/artifacts/material_fonts';
+  Future<ByteData> file(String name) async =>
+      ByteData.sublistView(await File('$dir/$name').readAsBytes());
 
-  final atkinson = FontLoader('AtkinsonHyperlegible')
-    ..addFont(file('assets/fonts/AtkinsonHyperlegible-Regular.ttf'))
-    ..addFont(file('assets/fonts/AtkinsonHyperlegible-Bold.ttf'));
+  final roboto = FontLoader('Roboto')
+    ..addFont(file('roboto-regular.ttf'))
+    ..addFont(file('roboto-medium.ttf'))
+    ..addFont(file('roboto-bold.ttf'));
   final icons = FontLoader('MaterialIcons')
-    ..addFont(
-      file(
-        '$root/bin/cache/artifacts/material_fonts/materialicons-regular.otf',
-      ),
-    );
-  await Future.wait([atkinson.load(), icons.load()]);
+    ..addFont(file('materialicons-regular.otf'));
+  await Future.wait([roboto.load(), icons.load()]);
 }
 
 void main() {

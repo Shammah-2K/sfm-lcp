@@ -168,8 +168,8 @@ class _UnusualCard extends StatelessWidget {
     return AttentionCard(
       key: const Key('unusual-card'),
       title: 'Is this right?',
-      // Stacked, primary first: side by side, the labels wrap on ordinary
-      // phones with Atkinson Hyperlegible.
+      // Stacked, primary first: full-width buttons stay readable at large
+      // text sizes and give bigger touch targets.
       actions: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
