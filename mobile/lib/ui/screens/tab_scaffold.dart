@@ -56,6 +56,7 @@ class _TabAppBarState extends State<TabAppBar> {
               context,
               participantCode: widget.participantCode,
               sync: sync,
+              onWithdraw: PortsScope.of(context).session.withdraw,
             );
             // Shrinks rather than overflows with a long code on a small
             // phone at large text sizes.

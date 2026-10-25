@@ -38,23 +38,6 @@ void main() {
       tester.widget<ButtonStyleButton>(byKey('primary-action')).onPressed !=
       null;
 
-  testWidgets('first launch asks for a participant code, then shows Today', (
-    tester,
-  ) async {
-    await launch(tester, participant: null);
-    expect(find.text('Participant code'), findsOneWidget);
-    expect(enabled(tester), isFalse);
-
-    await tester.enterText(byKey('participant-field'), 'lsk1');
-    await tester.pump();
-    expect(find.text('LSK1'), findsOneWidget, reason: 'auto-uppercased');
-    expect(enabled(tester), isTrue);
-
-    await tap(tester, byKey('primary-action'));
-    expect(find.text('Today'), findsWidgets);
-    expect(find.text('LSK1'), findsOneWidget);
-  });
-
   testWidgets(
     'Today shows totals, the unusual-entry check and recent entries',
     (tester) async {

@@ -43,7 +43,8 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     detector = FakeDetector();
     ports = buildAppPorts(db, detector: detector, clock: () => now);
-    await ports.session.start('LSK01');
+    await ports.session.recordConsent();
+    await ports.session.start('LSK01', BusinessType.marketStall);
   });
 
   tearDown(() => db.close());
@@ -75,19 +76,104 @@ void main() {
     method: PaymentMethod.mobileMoney,
   );
 
-  group('session (FR11)', () {
-    test('the participant code is saved and read back', () async {
-      expect(await ports.session.currentParticipant(), 'LSK01');
+  group('onboarding and session (FR11, ethics)', () {
+    test('the participant and business type are saved and read back', () async {
+      final s = await ports.session.state();
+      expect(
+        (s.consented, s.participantCode, s.complete),
+        (true, 'LSK01', true),
+      );
+      final row = await db.select(db.business).getSingle();
+      expect(row.businessType, 'market_stall');
+    });
+
+    test('a fresh install starts with nothing done', () async {
+      final fresh = buildAppPorts(AppDatabase(NativeDatabase.memory()));
+      final s = await fresh.session.state();
+      expect(
+        (s.consented, s.participantCode, s.withdrawn, s.hintsDismissed),
+        (false, null, false, false),
+      );
+    });
+
+    test('consent comes before the participant code', () async {
+      final fresh = buildAppPorts(AppDatabase(NativeDatabase.memory()));
+      await expectLater(
+        fresh.session.start('LSK02', BusinessType.shop),
+        throwsStateError,
+      );
+      await fresh.session.recordConsent();
+      await fresh.session.start('LSK02', BusinessType.shop);
+      expect((await fresh.session.state()).complete, isTrue);
+    });
+
+    test('consent alone leaves no business row', () async {
+      final freshDb = AppDatabase(NativeDatabase.memory());
+      final fresh = buildAppPorts(freshDb);
+      await fresh.session.recordConsent();
+      expect(await freshDb.select(freshDb.business).get(), isEmpty);
+      expect((await fresh.session.state()).complete, isFalse);
     });
 
     test('a phone has one participant only', () async {
-      await expectLater(ports.session.start('OTHER1'), throwsStateError);
+      await expectLater(
+        ports.session.start('OTHER1', BusinessType.shop),
+        throwsStateError,
+      );
     });
 
     test('a malformed code is refused', () async {
       final fresh = buildAppPorts(AppDatabase(NativeDatabase.memory()));
-      await expectLater(fresh.session.start('ab'), throwsArgumentError);
-      await expectLater(fresh.session.start('lsk01'), throwsArgumentError);
+      await fresh.session.recordConsent();
+      await expectLater(
+        fresh.session.start('ab', BusinessType.shop),
+        throwsArgumentError,
+      );
+      await expectLater(
+        fresh.session.start('lsk01', BusinessType.shop),
+        throwsArgumentError,
+      );
+    });
+
+    test('withdrawing is recorded once, and the sync badge knows', () async {
+      await ports.session.withdraw();
+      now = now.add(const Duration(hours: 1));
+      await ports.session.withdraw();
+      expect((await ports.session.state()).withdrawn, isTrue);
+      expect((await ports.sync.watch().first).withdrawn, isTrue);
+      final row = await (db.select(
+        db.appState,
+      )..where((s) => s.name.equals('withdrawn_at'))).getSingle();
+      expect(
+        row.value,
+        DateTime.utc(2026, 10, 26, 6).millisecondsSinceEpoch.toString(),
+        reason: 'the first time is kept',
+      );
+    });
+
+    test('withdrawing does not touch the ledger', () async {
+      await ports.ledger.recordSale(sale(100));
+      await ports.session.withdraw();
+      expect(await ports.ledger.watchToday().first, hasLength(1));
+      await ports.ledger.recordSale(sale(200));
+      expect(await ports.ledger.watchToday().first, hasLength(2));
+    });
+
+    test('dismissed hints stay dismissed', () async {
+      expect((await ports.session.state()).hintsDismissed, isFalse);
+      await ports.session.dismissHints();
+      expect((await ports.session.state()).hintsDismissed, isTrue);
+    });
+
+    test('app settings are never queued for sync', () async {
+      await ports.session.withdraw();
+      await ports.session.dismissHints();
+      expect(
+        await count(
+          "SELECT COUNT(*) AS n FROM sync_record WHERE entity_table NOT IN ('business')",
+        ),
+        0,
+      );
     });
   });
 

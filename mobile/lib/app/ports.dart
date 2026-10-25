@@ -1,20 +1,26 @@
 /// The contract between the UI and the rest of the app.
 ///
-/// The UI depends only on these interfaces. The real implementations (Drift
-/// ledger, totals from the schema's views, the on-device categoriser, the
-/// anomaly detector and the sync outbox) belong to the data and domain layers
-/// and are written by Shammah, per CLAUDE.md. Until then `lib/preview/`
-/// supplies fixed sample data so every screen can be run and reviewed.
+/// The UI depends only on these interfaces. The real implementations are in
+/// `lib/data/` (assembled in `app_ports.dart`); `lib/preview/` supplies fixed
+/// sample data for UI tests and screenshots.
 library;
 
 import 'view_data.dart';
 
 abstract interface class SessionPort {
-  /// The participant code saved on this phone, or null on first launch.
-  Future<String?> currentParticipant();
+  /// Where first launch has got to; the app opens on Today once [OnboardingState.complete].
+  Future<OnboardingState> state();
 
-  /// Saves the participant code (FR11). [code] is already 4–12 capitals or digits.
-  Future<void> start(String code);
+  /// The participant tapped "I agree" on the consent screen.
+  Future<void> recordConsent();
+
+  /// Saves the participant (FR11). [code] is already 4–12 capitals or digits.
+  Future<void> start(String code, BusinessType type);
+
+  /// "Stop taking part": the app keeps working, nothing more is sent.
+  Future<void> withdraw();
+
+  Future<void> dismissHints();
 }
 
 abstract interface class LedgerPort {

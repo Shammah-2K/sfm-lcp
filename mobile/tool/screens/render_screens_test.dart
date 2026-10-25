@@ -89,13 +89,20 @@ void main() {
     }
   }
 
-  testWidgets('S01 participant code', (tester) async {
+  testWidgets('S00 consent, S01 participant code, S01b business type', (
+    tester,
+  ) async {
     await launch(tester, participant: null);
+    await shot(tester, 's00_consent');
+    await tap(tester, byKey('consent-agree'));
     await tester.enterText(byKey('participant-field'), 'LSK01');
     await tester.pumpAndSettle();
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
     await shot(tester, 's01_participant_code');
+    await tap(tester, byKey('code-next'));
+    await tap(tester, byKey('business-market_stall'));
+    await shot(tester, 's01b_business_type');
   });
 
   testWidgets('S02 today with S08 check', (tester) async {

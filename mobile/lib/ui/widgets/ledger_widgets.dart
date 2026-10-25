@@ -226,11 +226,18 @@ class SyncBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = sync.waiting;
     final allSent = n == 0 && sync.lastSyncedAt != null;
+    final showCount = !allSent && !sync.withdrawn;
+    final String label;
+    if (sync.withdrawn) {
+      label = 'Not taking part. Nothing is sent';
+    } else if (allSent) {
+      label = 'All records sent';
+    } else {
+      label = '$n ${n == 1 ? 'record' : 'records'} waiting to sync';
+    }
     return Semantics(
       button: true,
-      label: allSent
-          ? 'All records sent'
-          : '$n ${n == 1 ? 'record' : 'records'} waiting to sync',
+      label: label,
       excludeSemantics: true,
       child: InkWell(
         key: const Key('sync-badge'),
@@ -255,13 +262,13 @@ class SyncBadge extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    allSent
+                    allSent && !sync.withdrawn
                         ? Icons.cloud_done_outlined
                         : Icons.cloud_off_outlined,
                     size: AppSizes.iconSmall,
                     color: AppColors.inkMuted,
                   ),
-                  if (!allSent) ...[
+                  if (showCount) ...[
                     const SizedBox(width: AppSpace.sm),
                     Text('$n', style: AppText.label),
                   ],
@@ -275,18 +282,21 @@ class SyncBadge extends StatelessWidget {
   }
 }
 
-/// S15: what the sync badge means, and who this phone belongs to.
+/// S15: what the sync badge means, who this phone belongs to, and how to stop
+/// taking part. [onWithdraw] runs after the participant confirms.
 Future<void> showSyncSheet(
   BuildContext context, {
   required String participantCode,
   required SyncView sync,
+  required Future<void> Function() onWithdraw,
 }) {
   final n = sync.waiting;
   final last = sync.lastSyncedAt;
   return showModalBottomSheet<void>(
     context: context,
-    builder: (context) => SafeArea(
-      child: Padding(
+    isScrollControlled: true,
+    builder: (sheet) => SafeArea(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
           AppSpace.gutter,
           0,
@@ -305,49 +315,110 @@ Future<void> showSyncSheet(
               ],
             ),
             const SizedBox(height: AppSpace.lg),
+            if (sync.withdrawn)
+              const Text(
+                'You have stopped taking part. Nothing more is sent to the '
+                'study. Your records stay on this phone and you can keep using '
+                'the app.',
+                key: Key('withdrawn-note'),
+                style: AppText.body,
+              )
+            else ...[
+              Row(
+                children: [
+                  Icon(
+                    n == 0
+                        ? Icons.cloud_done_outlined
+                        : Icons.cloud_off_outlined,
+                    color: AppColors.inkMuted,
+                  ),
+                  const SizedBox(width: AppSpace.md),
+                  Expanded(
+                    child: Text(
+                      n == 0
+                          ? 'All records sent'
+                          : '$n ${n == 1 ? 'record' : 'records'} waiting to sync',
+                      style: AppText.label,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpace.sm),
+              Text(
+                last == null
+                    ? 'Last synced: never'
+                    : 'Last synced: ${formatDayTime(last)}',
+                style: AppText.caption,
+              ),
+              const SizedBox(height: AppSpace.lg),
+              const Text(
+                'Your records are safe on this phone. They are sent by '
+                'themselves when you have network.',
+                style: AppText.body,
+              ),
+            ],
+            const SizedBox(height: AppSpace.md),
             Row(
               children: [
-                Icon(
-                  n == 0 ? Icons.cloud_done_outlined : Icons.cloud_off_outlined,
-                  color: AppColors.inkMuted,
-                ),
-                const SizedBox(width: AppSpace.md),
-                Expanded(
-                  child: Text(
-                    n == 0
-                        ? 'All records sent'
-                        : '$n ${n == 1 ? 'record' : 'records'} waiting to sync',
-                    style: AppText.label,
+                if (!sync.withdrawn)
+                  TextButton(
+                    key: const Key('stop-taking-part'),
+                    style: TextButton.styleFrom(foregroundColor: AppColors.ink),
+                    onPressed: () async {
+                      final sure = await showDialog<bool>(
+                        context: sheet,
+                        builder: (_) => const _WithdrawDialog(),
+                      );
+                      if (sure != true) return;
+                      await onWithdraw();
+                      if (sheet.mounted) Navigator.of(sheet).pop();
+                    },
+                    child: const Text('Stop taking part'),
                   ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => Navigator.of(sheet).pop(),
+                  child: const Text('Close'),
                 ),
               ],
-            ),
-            const SizedBox(height: AppSpace.sm),
-            Text(
-              last == null
-                  ? 'Last synced: never'
-                  : 'Last synced: ${formatDayTime(last)}',
-              style: AppText.caption,
-            ),
-            const SizedBox(height: AppSpace.lg),
-            const Text(
-              'Your records are safe on this phone. They are sent by themselves '
-              'when you have network.',
-              style: AppText.body,
-            ),
-            const SizedBox(height: AppSpace.md),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close'),
-              ),
             ),
           ],
         ),
       ),
     ),
   );
+}
+
+class _WithdrawDialog extends StatelessWidget {
+  const _WithdrawDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Stop taking part?'),
+      content: const Text(
+        'Nothing more will be sent to the study, and the study will delete what '
+        'it has from you. Your records stay on this phone and you can keep using '
+        'the app.',
+        style: AppText.body,
+      ),
+      actionsAlignment: MainAxisAlignment.spaceBetween,
+      actions: [
+        TextButton(
+          key: const Key('withdraw-cancel'),
+          onPressed: () => Navigator.of(context).pop(false),
+          style: TextButton.styleFrom(foregroundColor: AppColors.ink),
+          child: const Text('Keep going'),
+        ),
+        FilledButton(
+          key: const Key('withdraw-confirm'),
+          onPressed: () => Navigator.of(context).pop(true),
+          style: FilledButton.styleFrom(backgroundColor: AppColors.ink),
+          child: const Text('Stop'),
+        ),
+      ],
+    );
+  }
 }
 
 /// A totals row: icon disc · name over count · signed amount.

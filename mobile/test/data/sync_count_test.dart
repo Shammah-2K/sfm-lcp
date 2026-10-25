@@ -13,7 +13,8 @@ void main() {
   setUp(() async {
     db = AppDatabase(NativeDatabase.memory());
     ports = buildAppPorts(db);
-    await ports.session.start('LSK01');
+    await ports.session.recordConsent();
+    await ports.session.start('LSK01', BusinessType.marketStall);
   });
 
   tearDown(() => db.close());

@@ -15,15 +15,16 @@ part 'database.g.dart';
 /// * a sale needs an income category and an expense an expense category;
 /// * an expense needs a description;
 /// * every insert or update is queued in `sync_record` in the same transaction.
-@DriftDatabase(include: {'schema.drift'})
+@DriftDatabase(include: {'schema.drift', 'app_state.drift'})
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   /// The app's database file, `sfm_lcp.sqlite` in the app documents folder.
   factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'sfm_lcp'));
 
+  /// 1: Chapter 3's schema. 2: adds the local `app_state` table.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -41,6 +42,9 @@ class AppDatabase extends _$AppDatabase {
             ),
         ]);
       });
+    },
+    onUpgrade: (m, from, to) async {
+      if (from < 2) await m.createTable(appState);
     },
     // Foreign keys are off by default in SQLite and must be switched on
     // for every connection, outside any transaction.

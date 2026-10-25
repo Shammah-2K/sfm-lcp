@@ -9,6 +9,42 @@ enum EntryType { sale, expense }
 
 enum PaymentMethod { cash, mobileMoney }
 
+/// `business.business_type`, chosen with one tap during onboarding.
+enum BusinessType {
+  marketStall('market_stall'),
+  shop('shop'),
+  service('service'),
+  other('other');
+
+  const BusinessType(this.dbValue);
+
+  final String dbValue;
+}
+
+/// How far first launch has got (FR11 and the ethics procedure).
+class OnboardingState {
+  const OnboardingState({
+    required this.consented,
+    required this.participantCode,
+    required this.withdrawn,
+    required this.hintsDismissed,
+  });
+
+  /// The participant agreed on the in-app consent screen.
+  final bool consented;
+
+  /// Null until the participant code and business type are saved.
+  final String? participantCode;
+
+  /// The participant chose "Stop taking part": nothing more is sent.
+  final bool withdrawn;
+
+  /// The first-use hints on Today have been dismissed.
+  final bool hintsDismissed;
+
+  bool get complete => consented && participantCode != null;
+}
+
 /// One row of the ledger as the UI shows it.
 class EntryRow {
   const EntryRow({
@@ -140,11 +176,18 @@ class ProductRow {
 }
 
 class SyncView {
-  const SyncView({required this.waiting, this.lastSyncedAt});
+  const SyncView({
+    required this.waiting,
+    this.lastSyncedAt,
+    this.withdrawn = false,
+  });
 
   /// Records saved on the phone and not yet sent (FR9).
   final int waiting;
   final DateTime? lastSyncedAt;
+
+  /// The participant stopped taking part, so nothing will be sent.
+  final bool withdrawn;
 }
 
 /// A quantity of one product in a quick sale (FR6).

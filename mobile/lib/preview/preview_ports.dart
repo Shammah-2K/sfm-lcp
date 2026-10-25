@@ -54,15 +54,32 @@ DateTime _todayAt(int hour, int minute) {
 }
 
 class _PreviewSession implements SessionPort {
-  _PreviewSession(this._code);
+  _PreviewSession(this._code) : _consented = _code != null;
 
   String? _code;
+  bool _consented;
+  bool _withdrawn = false;
+  bool _hintsDismissed = false;
 
   @override
-  Future<String?> currentParticipant() async => _code;
+  Future<OnboardingState> state() async => OnboardingState(
+    consented: _consented,
+    participantCode: _code,
+    withdrawn: _withdrawn,
+    hintsDismissed: _hintsDismissed,
+  );
 
   @override
-  Future<void> start(String code) async => _code = code;
+  Future<void> recordConsent() async => _consented = true;
+
+  @override
+  Future<void> start(String code, BusinessType type) async => _code = code;
+
+  @override
+  Future<void> withdraw() async => _withdrawn = true;
+
+  @override
+  Future<void> dismissHints() async => _hintsDismissed = true;
 }
 
 class _PreviewLedger implements LedgerPort {

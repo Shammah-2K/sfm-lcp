@@ -2,10 +2,26 @@ import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
 import '../app/ports.dart';
+import '../app/view_data.dart';
 import 'database.dart';
 
-/// The participant who owns this phone (FR11). One `business` row per install;
-/// its id is the business id every ledger entry and product points at.
+/// Names of the local settings kept in `app_state`.
+abstract final class AppStateNames {
+  /// Epoch ms when the participant tapped "I agree".
+  static const String consentAt = 'consent_at';
+
+  /// Epoch ms when the participant chose "Stop taking part".
+  static const String withdrawnAt = 'withdrawn_at';
+
+  /// Epoch ms when the first-use hints were dismissed.
+  static const String hintsDismissedAt = 'hints_dismissed_at';
+}
+
+/// First launch and the participant who owns this phone (FR11, ethics).
+///
+/// Order: consent → participant code and type of business → Today. The
+/// `business` row is created only at the end, in one step, so a half-finished
+/// onboarding leaves nothing behind but the consent time.
 class SessionRepository implements SessionPort {
   SessionRepository(this._db, {DateTime Function()? clock})
     : _now = clock ?? DateTime.now;
@@ -13,16 +29,31 @@ class SessionRepository implements SessionPort {
   final AppDatabase _db;
   final DateTime Function() _now;
 
+  String _nowMs() => _now().toUtc().millisecondsSinceEpoch.toString();
+
   @override
-  Future<String?> currentParticipant() async {
-    final row = await (_db.select(_db.business)..limit(1)).getSingleOrNull();
-    return row?.participantCode;
+  Future<OnboardingState> state() async {
+    final business = await (_db.select(
+      _db.business,
+    )..limit(1)).getSingleOrNull();
+    final settings = {
+      for (final s in await _db.select(_db.appState).get()) s.name: s.value,
+    };
+    return OnboardingState(
+      consented: settings.containsKey(AppStateNames.consentAt),
+      participantCode: business?.participantCode,
+      withdrawn: settings.containsKey(AppStateNames.withdrawnAt),
+      hintsDismissed: settings.containsKey(AppStateNames.hintsDismissedAt),
+    );
   }
 
-  /// Creates the business row. Codes are 4–12 capitals or digits; the schema's
-  /// CHECK enforces the length and UNIQUE stops a second row with the same code.
   @override
-  Future<void> start(String code) async {
+  Future<void> recordConsent() => _setOnce(AppStateNames.consentAt);
+
+  /// Creates the business row. The schema's CHECK enforces the code length and
+  /// UNIQUE stops a second row with the same code; consent must come first.
+  @override
+  Future<void> start(String code, BusinessType type) async {
     if (!RegExp(r'^[A-Z0-9]{4,12}$').hasMatch(code)) {
       throw ArgumentError.value(
         code,
@@ -30,9 +61,14 @@ class SessionRepository implements SessionPort {
         'must be 4–12 capitals or digits',
       );
     }
-    final existing = await currentParticipant();
-    if (existing != null) {
-      throw StateError('This phone already belongs to $existing');
+    final current = await state();
+    if (!current.consented) {
+      throw StateError('Consent comes before the participant code');
+    }
+    if (current.participantCode != null) {
+      throw StateError(
+        'This phone already belongs to ${current.participantCode}',
+      );
     }
     await _db
         .into(_db.business)
@@ -40,10 +76,27 @@ class SessionRepository implements SessionPort {
           BusinessCompanion.insert(
             id: Value(const Uuid().v4()),
             participantCode: code,
+            businessType: Value(type.dbValue),
             createdAt: _now().toUtc().millisecondsSinceEpoch,
           ),
         );
   }
+
+  /// The app keeps working as the participant's own record book; the sync
+  /// worker (Phase 5) stops sending and asks the server to delete its copy.
+  @override
+  Future<void> withdraw() => _setOnce(AppStateNames.withdrawnAt);
+
+  @override
+  Future<void> dismissHints() => _setOnce(AppStateNames.hintsDismissedAt);
+
+  /// Records the first time only; later calls keep the original time.
+  Future<void> _setOnce(String name) => _db
+      .into(_db.appState)
+      .insert(
+        AppStateCompanion.insert(name: name, value: _nowMs()),
+        mode: InsertMode.insertOrIgnore,
+      );
 }
 
 /// Finds the business id once and remembers it. Every repository scopes its

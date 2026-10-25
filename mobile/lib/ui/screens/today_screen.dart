@@ -30,6 +30,7 @@ class _TodayScreenState extends State<TodayScreen> {
   List<EntryRow> _entries = const [];
   UnusualEntry? _check;
   PeriodTotals? _totals;
+  bool _showHints = false;
   final List<StreamSubscription<Object?>> _subs = [];
 
   @override
@@ -37,6 +38,9 @@ class _TodayScreenState extends State<TodayScreen> {
     super.didChangeDependencies();
     if (_subs.isNotEmpty) return;
     final ports = PortsScope.of(context);
+    ports.session.state().then((s) {
+      if (mounted && !s.hintsDismissed) setState(() => _showHints = true);
+    });
     _subs.addAll([
       ports.ledger.watchToday().listen((v) => setState(() => _entries = v)),
       ports.ledger.watchNeedsCheck().listen((v) => setState(() => _check = v)),
@@ -52,6 +56,11 @@ class _TodayScreenState extends State<TodayScreen> {
       s.cancel();
     }
     super.dispose();
+  }
+
+  void _dismissHints() {
+    setState(() => _showHints = false);
+    PortsScope.of(context).session.dismissHints();
   }
 
   void _record(EntryType type) {
@@ -122,6 +131,10 @@ class _TodayScreenState extends State<TodayScreen> {
               ),
             ),
           const SizedBox(height: AppSpace.lg),
+          if (_showHints && _entries.isEmpty) ...[
+            const SizedBox(height: AppSpace.lg),
+            _FirstUseHint(onDismiss: _dismissHints),
+          ],
           const SectionLabel('Recent entries'),
           if (_entries.isEmpty)
             const _EmptyDay()
@@ -203,6 +216,60 @@ class _UnusualCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// First use only: what the two big buttons are for. Neutral grey, not the
+/// attention yellow, which is kept for things that need checking.
+class _FirstUseHint extends StatelessWidget {
+  const _FirstUseHint({required this.onDismiss});
+
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget line(IconData icon, Color color, String text) => Padding(
+      padding: const EdgeInsets.only(bottom: AppSpace.sm),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: AppSizes.iconLarge),
+          const SizedBox(width: AppSpace.md),
+          Expanded(child: Text(text, style: AppText.body)),
+        ],
+      ),
+    );
+    return Container(
+      key: const Key('first-use-hint'),
+      padding: const EdgeInsets.all(AppSpace.lg),
+      margin: const EdgeInsets.only(bottom: AppSpace.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceSunken,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          line(
+            Icons.add_card,
+            AppColors.income,
+            'Tap Sale when money comes in.',
+          ),
+          line(
+            Icons.payments_outlined,
+            AppColors.expense,
+            'Tap Expense when money goes out.',
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              key: const Key('hint-dismiss'),
+              onPressed: onDismiss,
+              child: const Text('Got it'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

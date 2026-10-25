@@ -24,14 +24,16 @@ class SyncStatusRepository implements SyncPort {
         'SELECT '
         "(SELECT COUNT(DISTINCT entity_table || ':' || entity_id) FROM sync_record "
         "  WHERE status <> 'acked' AND entity_table <> 'entry_item') AS waiting, "
-        '(SELECT MAX(acked_at) FROM sync_record) AS last',
-        readsFrom: {_db.syncRecord},
+        '(SELECT MAX(acked_at) FROM sync_record) AS last, '
+        "EXISTS (SELECT 1 FROM app_state WHERE name = 'withdrawn_at') AS withdrawn",
+        readsFrom: {_db.syncRecord, _db.appState},
       )
       .watchSingle()
       .map((r) {
         final last = r.readNullable<int>('last');
         return SyncView(
           waiting: r.read<int>('waiting'),
+          withdrawn: r.read<bool>('withdrawn'),
           lastSyncedAt: last == null
               ? null
               : DateTime.fromMillisecondsSinceEpoch(last, isUtc: true),

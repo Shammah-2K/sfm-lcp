@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
 import '../ui/screens/app_shell.dart';
-import '../ui/screens/participant_screen.dart';
+import '../ui/screens/onboarding_flow.dart';
 import 'ports.dart';
+import 'view_data.dart';
 import 'ports_scope.dart';
 
 class SfmApp extends StatelessWidget {
@@ -25,8 +26,7 @@ class SfmApp extends StatelessWidget {
   }
 }
 
-/// First launch shows the participant code screen; later launches go straight
-/// to Today.
+/// First launch runs onboarding; later launches go straight to Today.
 class _Start extends StatefulWidget {
   const _Start();
 
@@ -35,29 +35,33 @@ class _Start extends StatefulWidget {
 }
 
 class _StartState extends State<_Start> {
-  Future<String?>? _current;
-  String? _started;
+  Future<OnboardingState>? _state;
+  String? _finished;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _current ??= PortsScope.of(context).session.currentParticipant();
+    _state ??= PortsScope.of(context).session.state();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String?>(
-      future: _current,
+    return FutureBuilder<OnboardingState>(
+      future: _state,
       builder: (context, snap) {
-        if (snap.connectionState != ConnectionState.done) {
+        final state = snap.data;
+        if (state == null) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final code = _started ?? snap.data;
+        final code =
+            _finished ?? (state.complete ? state.participantCode : null);
         if (code == null) {
-          return ParticipantScreen(
-            onStarted: (c) => setState(() => _started = c),
+          return OnboardingFlow(
+            consented: state.consented,
+            existingCode: state.participantCode,
+            onDone: (c) => setState(() => _finished = c),
           );
         }
         return AppShell(participantCode: code);
