@@ -21,30 +21,38 @@ schema, requirements or categories that Chapter 3 does not define.
 
 ## Working agreement
 
-Shammah writes the business logic and all machine-learning code himself. This is an academic
-integrity requirement, and the university requires an AI assistance log.
+The university requires an AI assistance log, and Shammah must be able to explain every part of
+the system at examination.
 
-**Claude Code may:** scaffold directory structure and build configuration; write widget skeletons
-and layout code; set up CI, linting, formatting and test harnesses; write test fixtures and tooling
-scripts; review code and explain errors; generate diagrams and docs from code that already exists.
+**Revised 25 Oct 2026 (Shammah's decision):** Claude Code writes the app's logic as well as its
+UI: ledger, totals, stock, onboarding, the sync client and the Supabase backend. Shammah reviews
+every phase to understand how it works and what needs revision. To make that review possible:
 
-**Claude Code must not:** write ledger logic, balance or categorisation rules, the sync/conflict
-resolution algorithm, or any ML training, evaluation or inference code. For those, propose an
-interface and a test, and leave the body to Shammah.
+- Each phase is delivered on its own branch in small, single-purpose commits.
+- Each phase comes with a review guide in `docs/review/` explaining how the code works, which
+  rules from Chapter 3 it enforces, and what to check.
+- Tests define "done" and act as executable documentation; every rule has a named test.
+- Every AI-written phase goes into Shammah's AI assistance log.
+
+**Still Shammah's unless he says otherwise before Phase 6:** ML training, evaluation and the
+on-device categoriser and anomaly detector. Claude Code builds the tooling around them (corpus
+validator, parity harness, benchmark harness) and the interfaces they plug into.
 
 **Never:** invent benchmark numbers, model accuracy figures or test results. Measured values come
 from running the harness on real hardware, or they don't exist.
 
-**Exception — `prototype/` only:** the throwaway 13 Oct 2026 demonstration build is fully
-AI-written under `BUILD_PROTOTYPE.md`, on branch `prototype/fr1-3`. That exception does not extend
-to any other folder, and nothing from `prototype/` is to be copied into the real app.
+**`prototype/`:** the throwaway 13 Oct 2026 demonstration build (branch `prototype/fr1-3`). Nothing
+from it is copied into the real app.
+
+The plan and decisions for the current phases are in `docs/plans/next-phase-plan.md`.
 
 ## Repository layout
 
 ```
 mobile/     Flutter application (real app)
-backend/    Node/TypeScript sync API (FR9; not started)
+backend/    Supabase project: SQL migrations, sync function, dashboard (FR9, FR10)
 ml/         Python training, evaluation, export (Shammah writes)
+docs/plans/ phase plans; docs/review/ review guides for AI-written phases
 docs/       design notes, generated diagrams, handoff briefs
 prototype/  throwaway FR1–FR3 demo (branch prototype/fr1-3)
 ```
