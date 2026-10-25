@@ -1,0 +1,184 @@
+-- =====================================================================
+-- SFM-LCP on-device database (SQLite, implemented with Drift)
+-- Logical/physical design for Chapter 3, Section 3.7.2
+-- Conventions:
+--   * Primary keys are UUID v4 strings generated on the phone, so records
+--     created offline never collide with records from other devices and
+--     retries are idempotent on the server (NFR4).
+--   * Money is stored as INTEGER ngwee (1 ZMW = 100 ngwee). Floating point
+--     cannot represent 0.10 exactly, so REAL would accumulate rounding error.
+--   * Timestamps are INTEGER milliseconds since 1970-01-01 UTC.
+--   * Ledger entries are append-only: a mistake is corrected by a reversal
+--     entry, never by editing or deleting the original.
+-- =====================================================================
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE business (
+  id               TEXT    PRIMARY KEY,
+  participant_code TEXT    NOT NULL UNIQUE CHECK (length(participant_code) BETWEEN 4 AND 12),
+  business_type    TEXT,
+  created_at       INTEGER NOT NULL
+);
+
+CREATE TABLE category (
+  code       TEXT    PRIMARY KEY,
+  name       TEXT    NOT NULL,
+  kind       TEXT    NOT NULL CHECK (kind IN ('income', 'expense')),
+  icon       TEXT    NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE product (
+  id               TEXT    PRIMARY KEY,
+  business_id      TEXT    NOT NULL REFERENCES business(id),
+  name             TEXT    NOT NULL CHECK (length(trim(name)) > 0),
+  unit_price_ngwee INTEGER NOT NULL CHECK (unit_price_ngwee >= 0),
+  reorder_level    INTEGER NOT NULL DEFAULT 0 CHECK (reorder_level >= 0),
+  is_active        INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+  created_at       INTEGER NOT NULL,
+  updated_at       INTEGER NOT NULL,
+  UNIQUE (business_id, name)
+);
+
+CREATE TABLE ledger_entry (
+  id                  TEXT    PRIMARY KEY,
+  business_id         TEXT    NOT NULL REFERENCES business(id),
+  entry_type          TEXT    NOT NULL CHECK (entry_type IN ('sale', 'expense')),
+  amount_ngwee        INTEGER NOT NULL,
+  description         TEXT    NOT NULL DEFAULT '' CHECK (length(description) <= 120),
+  payment_method      TEXT    NOT NULL DEFAULT 'cash' CHECK (payment_method IN ('cash', 'mobile_money')),
+  predicted_category  TEXT    REFERENCES category(code),
+  category_confidence REAL    CHECK (category_confidence BETWEEN 0 AND 1),
+  final_category      TEXT    NOT NULL REFERENCES category(code),
+  model_version       TEXT,
+  anomaly_score       REAL,
+  anomaly_flag        INTEGER NOT NULL DEFAULT 0 CHECK (anomaly_flag IN (0, 1)),
+  anomaly_reviewed_at INTEGER,
+  reverses_id         TEXT    UNIQUE REFERENCES ledger_entry(id),
+  occurred_at         INTEGER NOT NULL,
+  created_at          INTEGER NOT NULL,
+  updated_at          INTEGER NOT NULL,
+  -- an expense must say what it was for (FR2); a sale may rely on its items
+  CHECK (entry_type = 'sale' OR length(trim(description)) > 0),
+  -- originals are positive; reversals are negative and point at the original
+  CHECK ((reverses_id IS NULL AND amount_ngwee > 0) OR (reverses_id IS NOT NULL AND amount_ngwee < 0)),
+  -- a prediction and its confidence are stored together or not at all
+  CHECK ((predicted_category IS NULL) = (category_confidence IS NULL)),
+  CHECK (anomaly_flag = 0 OR anomaly_score IS NOT NULL)
+);
+
+CREATE TABLE entry_item (
+  id               TEXT    PRIMARY KEY,
+  entry_id         TEXT    NOT NULL REFERENCES ledger_entry(id),
+  product_id       TEXT    NOT NULL REFERENCES product(id),
+  quantity         INTEGER NOT NULL CHECK (quantity <> 0),
+  unit_price_ngwee INTEGER NOT NULL CHECK (unit_price_ngwee >= 0),
+  UNIQUE (entry_id, product_id)
+);
+
+CREATE TABLE stock_adjustment (
+  id             TEXT    PRIMARY KEY,
+  product_id     TEXT    NOT NULL REFERENCES product(id),
+  quantity_delta INTEGER NOT NULL CHECK (quantity_delta <> 0),
+  reason         TEXT    NOT NULL CHECK (reason IN ('opening', 'count', 'damage', 'other')),
+  created_at     INTEGER NOT NULL
+);
+
+CREATE TABLE sync_record (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  entity_table    TEXT    NOT NULL CHECK (entity_table IN ('business', 'product', 'ledger_entry', 'entry_item', 'stock_adjustment')),
+  entity_id       TEXT    NOT NULL,
+  operation       TEXT    NOT NULL CHECK (operation IN ('insert', 'update')),
+  status          TEXT    NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_flight', 'acked', 'failed')),
+  attempts        INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  last_error      TEXT,
+  created_at      INTEGER NOT NULL,
+  last_attempt_at INTEGER,
+  acked_at        INTEGER,
+  CHECK ((status = 'acked') = (acked_at IS NOT NULL))
+);
+
+-- ---------------------------------------------------------------- indexes
+CREATE INDEX ix_entry_business_time ON ledger_entry (business_id, occurred_at);
+CREATE INDEX ix_entry_category      ON ledger_entry (final_category);
+CREATE INDEX ix_item_entry          ON entry_item (entry_id);
+CREATE INDEX ix_item_product        ON entry_item (product_id);
+CREATE INDEX ix_adjust_product      ON stock_adjustment (product_id);
+CREATE INDEX ix_sync_queue          ON sync_record (status, id);
+
+-- ------------------------------------------------- append-only enforcement
+CREATE TRIGGER trg_entry_no_delete BEFORE DELETE ON ledger_entry
+BEGIN SELECT RAISE(ABORT, 'ledger entries are append-only: post a reversal'); END;
+
+CREATE TRIGGER trg_entry_no_financial_update
+BEFORE UPDATE OF business_id, entry_type, amount_ngwee, payment_method, reverses_id, occurred_at, created_at ON ledger_entry
+BEGIN SELECT RAISE(ABORT, 'financial fields are immutable: post a reversal'); END;
+
+CREATE TRIGGER trg_item_no_change BEFORE UPDATE ON entry_item
+BEGIN SELECT RAISE(ABORT, 'entry items are immutable'); END;
+
+CREATE TRIGGER trg_item_no_delete BEFORE DELETE ON entry_item
+BEGIN SELECT RAISE(ABORT, 'entry items are immutable'); END;
+
+CREATE TRIGGER trg_reversal_matches BEFORE INSERT ON ledger_entry
+WHEN NEW.reverses_id IS NOT NULL
+BEGIN
+  SELECT RAISE(ABORT, 'reversal must cancel the original exactly')
+  WHERE NOT EXISTS (SELECT 1 FROM ledger_entry o
+                    WHERE o.id = NEW.reverses_id AND o.reverses_id IS NULL
+                      AND o.entry_type = NEW.entry_type
+                      AND o.amount_ngwee = -NEW.amount_ngwee
+                      AND o.business_id = NEW.business_id);
+END;
+
+-- ------------------------------- outbox: every change queued atomically
+-- Triggers run inside the same SQLite transaction as the write, so a record
+-- can never be saved without also being queued for sync (FR9, NFR4).
+CREATE TRIGGER trg_q_business_ins AFTER INSERT ON business
+BEGIN INSERT INTO sync_record (entity_table, entity_id, operation, created_at) VALUES ('business', NEW.id, 'insert', NEW.created_at); END;
+CREATE TRIGGER trg_q_product_ins AFTER INSERT ON product
+BEGIN INSERT INTO sync_record (entity_table, entity_id, operation, created_at) VALUES ('product', NEW.id, 'insert', NEW.created_at); END;
+CREATE TRIGGER trg_q_product_upd AFTER UPDATE ON product
+BEGIN INSERT INTO sync_record (entity_table, entity_id, operation, created_at) VALUES ('product', NEW.id, 'update', NEW.updated_at); END;
+CREATE TRIGGER trg_q_entry_ins AFTER INSERT ON ledger_entry
+BEGIN INSERT INTO sync_record (entity_table, entity_id, operation, created_at) VALUES ('ledger_entry', NEW.id, 'insert', NEW.created_at); END;
+CREATE TRIGGER trg_q_entry_upd AFTER UPDATE ON ledger_entry
+BEGIN INSERT INTO sync_record (entity_table, entity_id, operation, created_at) VALUES ('ledger_entry', NEW.id, 'update', NEW.updated_at); END;
+CREATE TRIGGER trg_q_item_ins AFTER INSERT ON entry_item
+BEGIN INSERT INTO sync_record (entity_table, entity_id, operation, created_at)
+      VALUES ('entry_item', NEW.id, 'insert', (SELECT created_at FROM ledger_entry WHERE id = NEW.entry_id)); END;
+CREATE TRIGGER trg_q_adjust_ins AFTER INSERT ON stock_adjustment
+BEGIN INSERT INTO sync_record (entity_table, entity_id, operation, created_at) VALUES ('stock_adjustment', NEW.id, 'insert', NEW.created_at); END;
+
+-- ------------------------------------------- derived data as views (3NF)
+-- Stock is derived, not stored, so it can never disagree with the ledger.
+-- Sale items reduce stock; items on an expense (stock purchase) increase it.
+CREATE VIEW v_stock_level AS
+SELECT p.id AS product_id, p.business_id, p.name, p.reorder_level,
+       COALESCE((SELECT SUM(CASE e.entry_type WHEN 'expense' THEN i.quantity ELSE -i.quantity END)
+                 FROM entry_item i JOIN ledger_entry e ON e.id = i.entry_id
+                 WHERE i.product_id = p.id), 0)
+     + COALESCE((SELECT SUM(a.quantity_delta) FROM stock_adjustment a WHERE a.product_id = p.id), 0)
+       AS stock_qty
+FROM product p WHERE p.is_active = 1;
+
+CREATE VIEW v_low_stock AS
+SELECT * FROM v_stock_level WHERE stock_qty <= reorder_level;
+
+-- Daily totals for FR5 (Lusaka is UTC+2 all year, no daylight saving).
+CREATE VIEW v_daily_summary AS
+SELECT business_id,
+       date(occurred_at / 1000, 'unixepoch', '+2 hours') AS day,
+       SUM(CASE WHEN entry_type = 'sale'    THEN amount_ngwee ELSE 0 END) AS income_ngwee,
+       SUM(CASE WHEN entry_type = 'expense' THEN amount_ngwee ELSE 0 END) AS expense_ngwee,
+       SUM(CASE WHEN entry_type = 'sale' THEN amount_ngwee ELSE -amount_ngwee END) AS profit_ngwee
+FROM ledger_entry
+GROUP BY business_id, day;
+
+-- The confirmed category must be of the right kind (no 'airtime' on a sale).
+CREATE TRIGGER trg_category_kind BEFORE INSERT ON ledger_entry
+BEGIN
+  SELECT RAISE(ABORT, 'category kind does not match entry type')
+  WHERE (SELECT kind FROM category WHERE code = NEW.final_category)
+        <> CASE NEW.entry_type WHEN 'sale' THEN 'income' ELSE 'expense' END;
+END;
