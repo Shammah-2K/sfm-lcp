@@ -155,41 +155,26 @@ class _UnusualCard extends StatelessWidget {
     return AttentionCard(
       key: const Key('unusual-card'),
       title: 'Is this right?',
-      actions: LayoutBuilder(
-        builder: (context, constraints) {
-          final fix = OutlinedButton.icon(
-            key: const Key('unusual-fix'),
-            onPressed: onFix,
-            icon: const Icon(Icons.undo),
-            label: const Text('Fix it'),
-          );
-          final keep = FilledButton.icon(
+      // Stacked, primary first: side by side, the labels wrap on ordinary
+      // phones with Atkinson Hyperlegible.
+      actions: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FilledButton.icon(
             key: const Key('unusual-keep'),
             onPressed: onKeep,
             style: FilledButton.styleFrom(backgroundColor: AppColors.ink),
             icon: const Icon(Icons.check),
             label: const Text('Yes, keep it'),
-          );
-          // Side by side when they fit; stacked on narrow phones or large text.
-          final textScale = MediaQuery.textScalerOf(context).scale(1);
-          if (constraints.maxWidth / textScale < 300) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                keep,
-                const SizedBox(height: AppSpace.md),
-                fix,
-              ],
-            );
-          }
-          return Row(
-            children: [
-              Expanded(child: fix),
-              const SizedBox(width: AppSpace.md),
-              Expanded(child: keep),
-            ],
-          );
-        },
+          ),
+          const SizedBox(height: AppSpace.md),
+          OutlinedButton.icon(
+            key: const Key('unusual-fix'),
+            onPressed: onFix,
+            icon: const Icon(Icons.undo),
+            label: const Text('Fix it'),
+          ),
+        ],
       ),
       children: [
         Container(

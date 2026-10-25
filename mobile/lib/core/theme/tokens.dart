@@ -68,9 +68,9 @@ abstract final class AppSizes {
 
 /// Type scale (brief section 4). 14 sp is the floor and only for captions.
 abstract final class AppText {
-  /// The one type family. Roboto is Android's system font; switch to
-  /// 'AtkinsonHyperlegibleNext' here once its files are bundled (brief §4).
-  static const String family = 'Roboto';
+  /// The one type family: Atkinson Hyperlegible (Braille Institute, SIL OFL),
+  /// bundled in assets/fonts, designed so 0/O, 1/l/I and 5/S look different.
+  static const String family = 'AtkinsonHyperlegible';
 
   static const List<FontFeature> _tabular = [FontFeature.tabularFigures()];
 
