@@ -48,8 +48,9 @@ class UnusualEntry {
 
   final EntryRow entry;
 
-  /// What this category usually costs, as decided by the detector.
-  final int usualNgwee;
+  /// What this category usually costs, as decided by the detector; null when
+  /// there is too little history to say.
+  final int? usualNgwee;
 }
 
 class CategoryTotal {
@@ -100,13 +101,20 @@ class ScoredCategory {
 
 /// The on-device categoriser's answer for a description (FR3).
 class Suggestion {
-  const Suggestion({required this.top, required this.preselect});
+  const Suggestion({
+    required this.top,
+    required this.preselect,
+    required this.modelVersion,
+  });
 
   /// Best first; at most three.
   final List<ScoredCategory> top;
 
   /// The model is confident enough for the UI to select [top.first] for the user.
   final bool preselect;
+
+  /// Stored in `ledger_entry.model_version` beside the prediction.
+  final String modelVersion;
 }
 
 class ProductRow {

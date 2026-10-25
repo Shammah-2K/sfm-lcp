@@ -315,6 +315,7 @@ class _PreviewCategories implements CategoryPort {
     'bus fare to matero': Suggestion(
       top: [ScoredCategory('transport', 0.99)],
       preselect: true,
+      modelVersion: 'preview',
     ),
     'repair of wheelbarrow': Suggestion(
       top: [
@@ -323,6 +324,7 @@ class _PreviewCategories implements CategoryPort {
         ScoredCategory('utilities', 0.07),
       ],
       preselect: false,
+      modelVersion: 'preview',
     ),
   };
 

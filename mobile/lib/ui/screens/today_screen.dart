@@ -210,8 +210,10 @@ class _UnusualCard extends StatelessWidget {
               ),
               const SizedBox(height: AppSpace.xs),
               SignedAmount(e.amountNgwee, moneyIn: e.isIncome),
-              const SizedBox(height: AppSpace.xs),
-              Text(usuallyAbout(unusual.usualNgwee), style: AppText.caption),
+              if (unusual.usualNgwee case final usual?) ...[
+                const SizedBox(height: AppSpace.xs),
+                Text(usuallyAbout(usual), style: AppText.caption),
+              ],
             ],
           ),
         ),
