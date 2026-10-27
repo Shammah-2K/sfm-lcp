@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Sync to the study server (FR9). Debug builds get this from Flutter;
+         release builds need it here. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="SFM-LCP"
         android:name="${applicationName}"

@@ -86,6 +86,13 @@ class DuplicateProductName implements Exception {
 
 abstract interface class SyncPort {
   Stream<SyncView> watch();
+
+  /// Onboarding: can this participant code be used? Null when it cannot be
+  /// checked now (no network, or sync not set up); the first sync checks it.
+  Future<CodeCheck?> checkCode(String code);
+
+  /// "Sync now" in the account sheet. Returns when the run has finished.
+  Future<void> syncNow();
 }
 
 /// Everything the UI needs, handed down from the app root.

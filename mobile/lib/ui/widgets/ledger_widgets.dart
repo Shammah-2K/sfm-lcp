@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app/view_data.dart';
@@ -282,20 +284,74 @@ class SyncBadge extends StatelessWidget {
   }
 }
 
-/// S15: what the sync badge means, who this phone belongs to, and how to stop
-/// taking part. [onWithdraw] runs after the participant confirms.
+/// S15: what the sync badge means, who this phone belongs to, "Sync now", and
+/// how to stop taking part. [onWithdraw] runs after the participant confirms.
+/// [updates] keeps the sheet current while it is open (during "Sync now").
 Future<void> showSyncSheet(
   BuildContext context, {
   required String participantCode,
   required SyncView sync,
+  required Stream<SyncView> Function() updates,
   required Future<void> Function() onWithdraw,
+  required Future<void> Function() onSyncNow,
 }) {
-  final n = sync.waiting;
-  final last = sync.lastSyncedAt;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (sheet) => SafeArea(
+    builder: (_) => _SyncSheet(
+      participantCode: participantCode,
+      initial: sync,
+      updates: updates,
+      onWithdraw: onWithdraw,
+      onSyncNow: onSyncNow,
+    ),
+  );
+}
+
+class _SyncSheet extends StatefulWidget {
+  const _SyncSheet({
+    required this.participantCode,
+    required this.initial,
+    required this.updates,
+    required this.onWithdraw,
+    required this.onSyncNow,
+  });
+
+  final String participantCode;
+  final SyncView initial;
+  final Stream<SyncView> Function() updates;
+  final Future<void> Function() onWithdraw;
+  final Future<void> Function() onSyncNow;
+
+  @override
+  State<_SyncSheet> createState() => _SyncSheetState();
+}
+
+class _SyncSheetState extends State<_SyncSheet> {
+  late SyncView _sync = widget.initial;
+  StreamSubscription<SyncView>? _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _sub = widget.updates().listen((v) => setState(() => _sync = v));
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext sheet) {
+    final sync = _sync;
+    final n = sync.waiting;
+    final last = sync.lastSyncedAt;
+    final participantCode = widget.participantCode;
+    final onWithdraw = widget.onWithdraw;
+    final onSyncNow = widget.onSyncNow;
+    return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(
           AppSpace.gutter,
@@ -351,11 +407,34 @@ Future<void> showSyncSheet(
                 style: AppText.caption,
               ),
               const SizedBox(height: AppSpace.lg),
-              const Text(
-                'Your records are safe on this phone. They are sent by '
-                'themselves when you have network.',
-                style: AppText.body,
+              Text(
+                switch (sync) {
+                  SyncView(enabled: false) =>
+                    'Your records are safe on this phone. This copy of the '
+                        'app does not send them to the study.',
+                  SyncView(problem: CodeCheck.unknown) =>
+                    'Your code is not on the study list, so nothing can be '
+                        'sent yet. Show this to the researcher. Your records '
+                        'are safe on this phone.',
+                  SyncView(problem: CodeCheck.taken) =>
+                    'Your code is used on another phone, so nothing can be '
+                        'sent yet. Show this to the researcher. Your records '
+                        'are safe on this phone.',
+                  SyncView(problem: CodeCheck.withdrawn) =>
+                    'Your code has stopped taking part, so nothing is sent. '
+                        'Show this to the researcher. Your records are safe '
+                        'on this phone.',
+                  _ =>
+                    'Your records are safe on this phone. They are sent by '
+                        'themselves when you have network.',
+                },
+                key: const Key('sync-explainer'),
+                style: sync.problem == null ? AppText.body : AppText.label,
               ),
+              if (sync.enabled && sync.problem == null && n > 0) ...[
+                const SizedBox(height: AppSpace.md),
+                _SyncNowButton(onSync: onSyncNow),
+              ],
             ],
             const SizedBox(height: AppSpace.md),
             Row(
@@ -385,8 +464,45 @@ Future<void> showSyncSheet(
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
+}
+
+/// "Sync now": sends what is waiting and shows that it is working.
+class _SyncNowButton extends StatefulWidget {
+  const _SyncNowButton({required this.onSync});
+
+  final Future<void> Function() onSync;
+
+  @override
+  State<_SyncNowButton> createState() => _SyncNowButtonState();
+}
+
+class _SyncNowButtonState extends State<_SyncNowButton> {
+  bool _busy = false;
+
+  Future<void> _run() async {
+    setState(() => _busy = true);
+    try {
+      await widget.onSync();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      key: const Key('sync-now'),
+      onPressed: _busy ? null : _run,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.ink,
+        minimumSize: const Size.fromHeight(AppSizes.touch),
+      ),
+      icon: const Icon(Icons.cloud_upload_outlined),
+      label: Text(_busy ? 'Sending…' : 'Sync now'),
+    );
+  }
 }
 
 class _WithdrawDialog extends StatelessWidget {

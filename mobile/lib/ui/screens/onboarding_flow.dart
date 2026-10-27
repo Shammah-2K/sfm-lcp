@@ -48,6 +48,23 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     setState(() => _step = _Step.code);
   }
 
+  /// Decision D6: with network, a code not on the study list (or already in
+  /// use) is caught here. Without network it is accepted and the first sync
+  /// checks it. Returns the message to show, or null to go on.
+  Future<String?> _checkCode(String code) async {
+    final check = await PortsScope.of(context).sync.checkCode(code);
+    return switch (check) {
+      null || CodeCheck.ok => null,
+      CodeCheck.unknown =>
+        'This code is not on the study list. Check it with the researcher.',
+      CodeCheck.taken =>
+        'This code is already used on another phone. Check it with the '
+            'researcher.',
+      CodeCheck.withdrawn =>
+        'This code has stopped taking part. Check it with the researcher.',
+    };
+  }
+
   Future<void> _finish() async {
     setState(() => _saving = true);
     try {
@@ -77,6 +94,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       ),
       _Step.code => _CodeStep(
         initial: _code,
+        check: _checkCode,
         onNext: (code) => setState(() {
           _code = code;
           _step = _Step.businessType;
@@ -278,9 +296,16 @@ class _NotNowStep extends StatelessWidget {
 }
 
 class _CodeStep extends StatefulWidget {
-  const _CodeStep({required this.initial, required this.onNext});
+  const _CodeStep({
+    required this.initial,
+    required this.check,
+    required this.onNext,
+  });
 
   final String initial;
+
+  /// Returns a message if the code cannot be used, or null.
+  final Future<String?> Function(String code) check;
   final ValueChanged<String> onNext;
 
   @override
@@ -290,8 +315,10 @@ class _CodeStep extends StatefulWidget {
 class _CodeStepState extends State<_CodeStep> {
   static final RegExp _valid = RegExp(r'^[A-Z0-9]{4,12}$');
   late final _code = TextEditingController(text: widget.initial);
+  bool _checking = false;
+  String? _problem;
 
-  bool get _canGo => _valid.hasMatch(_code.text);
+  bool get _canGo => !_checking && _valid.hasMatch(_code.text);
 
   @override
   void dispose() {
@@ -299,8 +326,17 @@ class _CodeStepState extends State<_CodeStep> {
     super.dispose();
   }
 
-  void _next() {
-    if (_canGo) widget.onNext(_code.text);
+  Future<void> _next() async {
+    if (!_canGo) return;
+    final code = _code.text;
+    setState(() => _checking = true);
+    final problem = await widget.check(code);
+    if (!mounted) return;
+    setState(() {
+      _checking = false;
+      _problem = problem;
+    });
+    if (problem == null) widget.onNext(code);
   }
 
   @override
@@ -333,14 +369,28 @@ class _CodeStepState extends State<_CodeStep> {
             FilteringTextInputFormatter.allow(RegExp('[A-Z0-9]')),
           ],
           decoration: const InputDecoration(hintText: 'Code'),
-          onChanged: (_) => setState(() {}),
+          onChanged: (_) => setState(() => _problem = null),
           onSubmitted: (_) => _next(),
         ),
+        if (_problem != null) ...[
+          const SizedBox(height: AppSpace.md),
+          // Plain ink, not the attention card: the brief keeps that for
+          // unusual entries and low stock.
+          Row(
+            key: const Key('code-problem'),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.ink),
+              const SizedBox(width: AppSpace.sm),
+              Expanded(child: Text(_problem!, style: AppText.label)),
+            ],
+          ),
+        ],
       ],
       actions: [
         PrimaryAction(
           key: const Key('code-next'),
-          label: 'Next',
+          label: _checking ? 'Checking…' : 'Next',
           icon: Icons.arrow_forward,
           onPressed: _canGo ? _next : null,
         ),

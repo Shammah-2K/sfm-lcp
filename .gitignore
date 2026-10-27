@@ -137,3 +137,5 @@ desktop.ini
 logs/
 tmp/
 temp/
+# Supabase project URL and anon key for builds (copy supabase.example.json)
+mobile/supabase.json

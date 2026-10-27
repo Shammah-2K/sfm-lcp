@@ -175,11 +175,27 @@ class ProductRow {
   bool get isOut => inStock <= 0;
 }
 
+/// What the study server said about a participant code (decision D6).
+enum CodeCheck {
+  ok,
+
+  /// Not on the researcher's list.
+  unknown,
+
+  /// Already used on another phone.
+  taken,
+
+  /// This code has stopped taking part.
+  withdrawn,
+}
+
 class SyncView {
   const SyncView({
     required this.waiting,
     this.lastSyncedAt,
     this.withdrawn = false,
+    this.enabled = true,
+    this.problem,
   });
 
   /// Records saved on the phone and not yet sent (FR9).
@@ -188,6 +204,13 @@ class SyncView {
 
   /// The participant stopped taking part, so nothing will be sent.
   final bool withdrawn;
+
+  /// False in a build made without the server's address: records stay on
+  /// the phone only.
+  final bool enabled;
+
+  /// Why records cannot be sent: the code is not usable. Null when fine.
+  final CodeCheck? problem;
 }
 
 /// A quantity of one product in a quick sale (FR6).

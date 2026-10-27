@@ -1,23 +1,21 @@
 # SFM-LCP mobile app
 
 The Android app for market traders: record sales and expenses, see today's totals, keep stock,
-all offline. This folder holds the **full UI**, built from
-[`docs/design/ui-design-brief.md`](../docs/design/ui-design-brief.md). The data, ledger,
-categoriser, anomaly detector and sync are the next phase. The UI talks to them only through the
-interfaces in `lib/app/ports.dart`.
+all offline, and sync a copy to the study server when there is network. The UI is built from
+[`docs/design/ui-design-brief.md`](../docs/design/ui-design-brief.md) and talks to the rest of
+the app only through the interfaces in `lib/app/ports.dart`. The categoriser and anomaly
+detector are stand-ins until the ML phase.
 
 ## Run it
 
 ```bash
 cd mobile
-flutter run
+flutter run --dart-define-from-file=supabase.json   # with sync (see ../backend/README.md)
+flutter run                                         # offline only
 ```
 
-Until the real data layer exists, `main.dart` starts the app on **preview data**
-(`lib/preview/preview_ports.dart`): five sample entries, four products and fixed totals. Preview
-data is a stand-in. Totals don't change when you record something, only two sample phrases get a
-category suggestion ("bus fare to Matero", "Repair of wheelbarrow"), and nothing survives a
-restart.
+`lib/preview/preview_ports.dart` holds fixed sample data, used only by the UI tests and the
+screen renders.
 
 ## Layout
 

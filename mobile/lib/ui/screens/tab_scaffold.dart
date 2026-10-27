@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app/ports_scope.dart';
@@ -52,11 +54,18 @@ class _TabAppBarState extends State<TabAppBar> {
           stream: _sync,
           builder: (context, snap) {
             final sync = snap.data ?? const SyncView(waiting: 0);
+            final ports = PortsScope.of(context);
             void open() => showSyncSheet(
               context,
               participantCode: widget.participantCode,
               sync: sync,
-              onWithdraw: PortsScope.of(context).session.withdraw,
+              updates: ports.sync.watch,
+              onWithdraw: () async {
+                await ports.session.withdraw();
+                // Ask the server to delete its copy now, without waiting.
+                unawaited(ports.sync.syncNow());
+              },
+              onSyncNow: ports.sync.syncNow,
             );
             // Shrinks rather than overflows with a long code on a small
             // phone at large text sizes.

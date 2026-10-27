@@ -458,4 +458,11 @@ class _PreviewStock implements StockPort {
 class _PreviewSync implements SyncPort {
   @override
   Stream<SyncView> watch() => Stream.value(const SyncView(waiting: 5));
+
+  /// Preview data has no server: codes are not checked.
+  @override
+  Future<CodeCheck?> checkCode(String code) async => null;
+
+  @override
+  Future<void> syncNow() async {}
 }

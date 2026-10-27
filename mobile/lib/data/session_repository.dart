@@ -15,6 +15,21 @@ abstract final class AppStateNames {
 
   /// Epoch ms when the first-use hints were dismissed.
   static const String hintsDismissedAt = 'hints_dismissed_at';
+
+  // Sync (Phase 5). Written only by the sync worker.
+
+  /// This install's anonymous sign-in, as JSON (`AuthSession`).
+  static const String authSession = 'auth_session';
+
+  /// The participant code the server has bound to this install.
+  static const String claimedCode = 'claimed_code';
+
+  /// Why sending is blocked: a `CodeStatus` name (`unknown`, `taken`,
+  /// `withdrawn`). Absent when nothing is wrong.
+  static const String codeProblem = 'code_problem';
+
+  /// Epoch ms when the server confirmed the withdrawal and deleted its copy.
+  static const String withdrawConfirmedAt = 'withdraw_confirmed_at';
 }
 
 /// First launch and the participant who owns this phone (FR11, ethics).
