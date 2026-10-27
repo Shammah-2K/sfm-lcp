@@ -5,9 +5,9 @@ record it in the AI assistance log. Covers FR9, NFR4, UC11 and decision D6 (agre
 anonymous sign-in per install, codes LSK01–LSK20, one install per code, check at onboarding when
 online, server-side deletion on withdrawal). FR10 (dashboard) is not started.
 
-**Not yet run against a real Supabase project.** Everything below is tested against an in-memory
-server with the same rules (`test/sync/fake_server.dart`). Section 6 lists what to check once your
-project exists.
+**Not yet run against your Supabase project.** The app side is tested against an in-memory
+server with the same rules (`test/sync/fake_server.dart`). The SQL itself is tested in real
+PostgreSQL 15 (section 5b). Section 6 lists what to check on your project.
 
 ## 1. What changed for the user
 
@@ -112,6 +112,21 @@ and ran it: 43 of 50 trials failed. The change was then undone.
 half of "no duplicates" is the `ON CONFLICT` clauses in the SQL; check those against the real
 project (section 6). For Chapter 4, choose N (`--dart-define=NFR4_TRIALS=…`), run it yourself
 and quote the line it prints.
+
+## 5b. The SQL in real PostgreSQL
+
+`bash backend/supabase/tests/run.sh` runs the migration in a throwaway `postgres:15-alpine`
+container with a stand-in for Supabase's `auth` schema, roles and **default grants**, then 37
+checks: code checking and claiming, a batch stored once and resent with nothing stored twice,
+last-writer-wins without ever changing an amount, all-or-nothing refusals, what `anon` and the app
+cannot do, withdrawal deleting one phone's data only, and `release_code`. The run on 27 Oct 2026
+ended `ALL SQL CHECKS PASSED`.
+
+**It found a real problem first.** Supabase grants every new function to `anon` and
+`authenticated` directly, and the migration had only revoked from `PUBLIC`. An anonymous caller
+could therefore reach `sync_push`, `claim_code` and `withdraw`. They refused anyway ("not signed
+in"), but the lock-down was not what the comments claimed. The migration now revokes from all
+three roles, and a test checks it.
 
 ## 6. Once your Supabase project exists
 

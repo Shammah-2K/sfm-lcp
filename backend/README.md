@@ -66,6 +66,18 @@ from ledger_entry e join business b on b.id = e.business_id
 group by 1 order by 1;
 ```
 
+## Test the SQL locally
+
+```bash
+bash backend/supabase/tests/run.sh
+```
+
+Needs Docker. It starts a throwaway `postgres:15-alpine` container, adds a small stand-in for
+Supabase (`tests/00_supabase_stub.sql`: the `auth` schema, the `anon` and `authenticated` roles,
+and Supabase's default grants), runs the migration and the seed, then
+`tests/sync_functions_test.sql`. Each check prints `ok`, and the run ends with
+`ALL SQL CHECKS PASSED` or stops at the first failure.
+
 ## Rules the server keeps (Chapter 3)
 
 - Primary keys are the phone's UUIDs, so a batch sent twice (a lost reply, a retry) stores

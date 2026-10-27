@@ -348,11 +348,13 @@ language sql security definer set search_path = public, pg_temp as $$
    where code = upper(p_code);
 $$;
 
--- Functions are executable by everyone by default; open only what the app needs.
-revoke all on function public.check_code(text)   from public;
-revoke all on function public.claim_code(text)   from public;
-revoke all on function public.sync_push(jsonb)   from public;
-revoke all on function public.withdraw()         from public;
+-- Supabase grants every new function to anon and authenticated directly (not
+-- only through PUBLIC), so revoke from all three, then open only what the app
+-- needs. Checked by tests/sync_functions_test.sql.
+revoke all on function public.check_code(text)   from public, anon, authenticated;
+revoke all on function public.claim_code(text)   from public, anon, authenticated;
+revoke all on function public.sync_push(jsonb)   from public, anon, authenticated;
+revoke all on function public.withdraw()         from public, anon, authenticated;
 revoke all on function public.release_code(text) from public, anon, authenticated;
 grant execute on function public.check_code(text) to anon, authenticated;
 grant execute on function public.claim_code(text) to authenticated;
