@@ -246,6 +246,24 @@ void main() {
       await scrollThrough(tester);
     });
 
+    testWidgets('Stock purchase and its product line', (tester) async {
+      // The expense screen stays mounted under the line screen: `.last` is
+      // the one on top.
+      Finder top(String k) => byKey(k).last;
+      await small(tester);
+      await tap(tester, byKey('new-expense'));
+      await tap(tester, byKey('category-other'));
+      await tap(tester, top('category-stock'));
+      await tap(tester, byKey('add-bought'));
+      await tap(tester, byKey('buy-p1'));
+      for (final d in '1250'.split('')) {
+        await tap(tester, top('key-$d'));
+      }
+      await scrollThrough(tester);
+      await tap(tester, top('primary-action'));
+      await scrollThrough(tester);
+    });
+
     testWidgets('Sale products, entry detail, new product', (tester) async {
       await small(tester);
       await tap(tester, byKey('new-sale'));

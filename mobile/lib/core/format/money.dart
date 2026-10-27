@@ -34,5 +34,14 @@ int? parseTypedNgwee(String text) {
   return total > 0 ? total : null;
 }
 
+/// The reverse of [parseTypedNgwee], for showing a worked-out amount on the
+/// keypad display: `20000` → `200`, `2550` → `25.50`.
+String typedFromNgwee(int ngwee) {
+  final cents = ngwee % 100;
+  return cents == 0
+      ? '${ngwee ~/ 100}'
+      : '${ngwee ~/ 100}.${cents.toString().padLeft(2, '0')}';
+}
+
 /// What the amount display shows while typing: `K` + the typed text, or `K0`.
 String typedAmountLabel(String text) => 'K${text.isEmpty ? '0' : text}';

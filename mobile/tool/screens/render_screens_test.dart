@@ -149,6 +149,25 @@ void main() {
     await shot(tester, 's05b_expense_unsure');
   });
 
+  testWidgets('S05c stock purchase, S05d product bought', (tester) async {
+    await launch(tester, height: 1250);
+    await tap(tester, byKey('new-expense'));
+    await tap(tester, byKey('category-other'));
+    await tap(tester, byKey('category-stock').last);
+    await tap(tester, byKey('add-bought'));
+    await tap(tester, byKey('buy-p1'));
+    for (var i = 0; i < 9; i++) {
+      await tap(tester, find.byIcon(Icons.add).last);
+    }
+    for (final d in '20'.split('')) {
+      await tap(tester, byKey('key-$d').last);
+    }
+    await shot(tester, 's05d_purchase_line');
+    await tap(tester, byKey('primary-action').last);
+    await top(tester);
+    await shot(tester, 's05c_stock_purchase');
+  });
+
   testWidgets('S06 all categories sheet', (tester) async {
     await launch(tester);
     await tap(tester, byKey('new-expense'));

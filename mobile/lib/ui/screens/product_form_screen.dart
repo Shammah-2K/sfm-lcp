@@ -11,7 +11,12 @@ import 'tab_scaffold.dart';
 /// S13 New product (FR6, FR7). The price is typed on the keypad, not the
 /// system keyboard.
 class ProductFormScreen extends StatefulWidget {
-  const ProductFormScreen({super.key});
+  const ProductFormScreen({super.key, this.forPurchase = false});
+
+  /// Opened while recording a stock purchase: the stock comes from that
+  /// purchase, so "Stock now" is hidden and stays 0. Otherwise the trader
+  /// would count the same items twice.
+  final bool forPurchase;
 
   @override
   State<ProductFormScreen> createState() => _ProductFormScreenState();
@@ -127,13 +132,20 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     caption: 'left',
                   ),
                   const SizedBox(height: AppSpace.lg),
-                  const SectionLabel('Stock now'),
-                  CountStepper(
-                    key: const Key('opening-stock'),
-                    value: _openingStock,
-                    onChanged: (v) => setState(() => _openingStock = v),
-                    caption: 'in stock',
-                  ),
+                  if (widget.forPurchase)
+                    const InfoLine(
+                      icon: Icons.inventory_2_outlined,
+                      text: 'The stock is added from this purchase.',
+                    )
+                  else ...[
+                    const SectionLabel('Stock now'),
+                    CountStepper(
+                      key: const Key('opening-stock'),
+                      value: _openingStock,
+                      onChanged: (v) => setState(() => _openingStock = v),
+                      caption: 'in stock',
+                    ),
+                  ],
                 ],
               ),
             ),

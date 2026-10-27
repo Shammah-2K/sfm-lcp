@@ -11,6 +11,7 @@ import '../widgets/amount_entry.dart';
 import '../widgets/building_blocks.dart';
 import '../widgets/choices.dart';
 import '../widgets/money.dart';
+import 'purchase_line_screen.dart';
 import 'tab_scaffold.dart';
 
 enum _SaleMode { amount, products }
@@ -32,6 +33,12 @@ class _EntryScreenState extends State<EntryScreen> {
   PaymentMethod _method = PaymentMethod.cash;
   _SaleMode _mode = _SaleMode.amount;
   final Map<String, int> _quantities = {};
+
+  /// Products bought on a stock-purchase expense (FR7), in the order added.
+  final List<PurchaseLine> _bought = [];
+
+  /// The trader typed the amount, so it no longer follows the bought lines.
+  bool _amountEdited = false;
   List<ProductRow> _products = const [];
   StreamSubscription<List<ProductRow>>? _productSub;
 
@@ -54,8 +61,22 @@ class _EntryScreenState extends State<EntryScreen> {
 
   int get _productCount => _quantities.values.fold(0, (a, b) => a + b);
 
+  /// Lines are kept if the category changes, but only a stock purchase
+  /// shows or saves them.
+  bool get _buyingStock => !_isSale && _category == stockPurchaseCategory;
+
+  List<PurchaseLine> get _boughtLines => _buyingStock ? _bought : const [];
+
+  int get _boughtNgwee => _bought.fold(0, (sum, l) => sum + l.totalNgwee);
+
+  /// The amount defaults to the bought lines' total until the trader types
+  /// one (a discount, a delivery fee).
+  bool get _amountFollowsLines => _boughtLines.isNotEmpty && !_amountEdited;
+
   int? get _amountNgwee => _mode == _SaleMode.products
       ? (_productsNgwee > 0 ? _productsNgwee : null)
+      : _amountFollowsLines
+      ? (_boughtNgwee > 0 ? _boughtNgwee : null)
       : _typedNgwee;
 
   /// The user's pick, else a confident suggestion, else Sales of goods for a
@@ -71,17 +92,16 @@ class _EntryScreenState extends State<EntryScreen> {
   bool get _canSave =>
       !_saving &&
       _amountNgwee != null &&
-      (_isSale || _hasDescription) &&
+      (_isSale || _hasDescription || _boughtLines.isNotEmpty) &&
       _category != null;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_isSale) {
-      _productSub ??= PortsScope.of(context).stock.watchProducts().listen(
-        (list) => setState(() => _products = list),
-      );
-    }
+    // Sales pick products; expenses name the products bought.
+    _productSub ??= PortsScope.of(
+      context,
+    ).stock.watchProducts().listen((list) => setState(() => _products = list));
   }
 
   @override
@@ -114,6 +134,34 @@ class _EntryScreenState extends State<EntryScreen> {
     if (code != null) setState(() => _picked = code);
   }
 
+  Future<void> _addBought() async {
+    final product = await pickBoughtProduct(
+      context,
+      products: _products,
+      alreadyBought: {for (final l in _bought) l.productId},
+    );
+    if (product == null || !mounted) return;
+    final line = await Navigator.of(context).push<PurchaseLine>(
+      MaterialPageRoute(builder: (_) => PurchaseLineScreen(product: product)),
+    );
+    if (line != null) setState(() => _bought.add(line));
+  }
+
+  Future<void> _editBought(int index, ProductRow product) async {
+    final line = await Navigator.of(context).push<PurchaseLine>(
+      MaterialPageRoute(
+        builder: (_) =>
+            PurchaseLineScreen(product: product, initial: _bought[index]),
+      ),
+    );
+    if (line != null) setState(() => _bought[index] = line);
+  }
+
+  void _useBoughtTotal() => setState(() {
+    _amountEdited = false;
+    _amountText = '';
+  });
+
   Future<void> _save() async {
     final amount = _amountNgwee!;
     final category = _category!;
@@ -142,10 +190,13 @@ class _EntryScreenState extends State<EntryScreen> {
         await ledger.recordExpense(
           ExpenseDraft(
             amountNgwee: amount,
-            description: _description.text.trim(),
+            description: _hasDescription
+                ? _description.text.trim()
+                : _boughtSummary(),
             categoryCode: category,
             method: _method,
             suggestion: _suggestion,
+            lines: _boughtLines,
           ),
         );
       }
@@ -169,6 +220,22 @@ class _EntryScreenState extends State<EntryScreen> {
     for (final p in _products)
       if ((_quantities[p.id] ?? 0) > 0) '${_quantities[p.id]} × ${p.name}',
   ].join(', ');
+
+  /// Every expense needs a description; a purchase without one is described
+  /// by what was bought, cut to the field's limit.
+  String _boughtSummary() {
+    final text = [
+      for (final l in _bought) '${l.quantity} × ${_productName(l.productId)}',
+    ].join(', ');
+    return text.length <= AppSizes.descriptionMax
+        ? text
+        : '${text.substring(0, AppSizes.descriptionMax - 1)}…';
+  }
+
+  ProductRow? _productFor(String id) =>
+      _products.where((p) => p.id == id).firstOrNull;
+
+  String _productName(String id) => _productFor(id)?.name ?? 'Product';
 
   @override
   Widget build(BuildContext context) {
@@ -253,14 +320,17 @@ class _EntryScreenState extends State<EntryScreen> {
     final moneyIn = _isSale;
     return [
       AmountDisplay(
-        text: _amountText,
+        text: _amountFollowsLines ? typedFromNgwee(_boughtNgwee) : _amountText,
         moneyIn: moneyIn,
-        valid: _typedNgwee != null,
+        valid: _amountNgwee != null,
       ),
       const SizedBox(height: AppSpace.md),
       AmountKeypad(
         text: _amountText,
-        onChanged: (t) => setState(() => _amountText = t),
+        onChanged: (t) => setState(() {
+          _amountText = t;
+          _amountEdited = true;
+        }),
       ),
       const SizedBox(height: AppSpace.lg),
       TextField(
@@ -284,6 +354,63 @@ class _EntryScreenState extends State<EntryScreen> {
         onPick: (code) => setState(() => _picked = code),
         onOther: _pickOther,
       ),
+      if (_buyingStock) ...[
+        const SizedBox(height: AppSpace.lg),
+        ..._boughtSection(),
+      ],
+    ];
+  }
+
+  /// "Products bought" on a stock purchase: each line raises that product's
+  /// stock when saved.
+  List<Widget> _boughtSection() {
+    final typed = _typedNgwee;
+    return [
+      const SectionLabel('Products bought'),
+      for (final (i, line) in _bought.indexed)
+        Padding(
+          padding: const EdgeInsets.only(bottom: AppSpace.sm),
+          child: _BoughtLineTile(
+            name: _productName(line.productId),
+            line: line,
+            onTap: switch (_productFor(line.productId)) {
+              null => null,
+              final p => () => _editBought(i, p),
+            },
+            onRemove: () => setState(() => _bought.removeAt(i)),
+          ),
+        ),
+      OutlinedButton.icon(
+        key: const Key('add-bought'),
+        onPressed: _addBought,
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(AppSizes.touch),
+        ),
+        icon: const Icon(Icons.add),
+        label: const Text('Add product'),
+      ),
+      const SizedBox(height: AppSpace.sm),
+      if (_bought.isEmpty)
+        const InfoLine(
+          icon: Icons.inventory_2_outlined,
+          text: 'Add what you bought and your stock goes up.',
+        )
+      else ...[
+        InfoLine(
+          key: const Key('bought-total'),
+          icon: Icons.calculate_outlined,
+          text: 'Products add up to ${formatKwacha(_boughtNgwee)}',
+        ),
+        if (_amountEdited && typed != _boughtNgwee)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              key: const Key('use-bought-total'),
+              onPressed: _useBoughtTotal,
+              child: Text('Use ${formatKwacha(_boughtNgwee)} as the amount'),
+            ),
+          ),
+      ],
     ];
   }
 
@@ -433,6 +560,65 @@ class _ProductPickTile extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One product on a stock purchase. Tap to change it; the cross removes it.
+class _BoughtLineTile extends StatelessWidget {
+  const _BoughtLineTile({
+    required this.name,
+    required this.line,
+    required this.onTap,
+    required this.onRemove,
+  });
+
+  final String name;
+  final PurchaseLine line;
+  final VoidCallback? onTap;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      key: Key('bought-${line.productId}'),
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.control),
+        child: Padding(
+          padding: const EdgeInsets.only(left: AppSpace.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpace.sm),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${line.quantity} × $name', style: AppText.label),
+                      Text(
+                        '${formatKwacha(line.unitCostNgwee)} each · '
+                        '${formatKwacha(line.totalNgwee)}',
+                        style: AppText.body,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              IconButton(
+                key: Key('remove-bought-${line.productId}'),
+                onPressed: onRemove,
+                constraints: const BoxConstraints(
+                  minWidth: AppSizes.touch,
+                  minHeight: AppSizes.touch,
+                ),
+                icon: Icon(Icons.close, semanticLabel: 'Remove $name'),
+              ),
+            ],
+          ),
         ),
       ),
     );

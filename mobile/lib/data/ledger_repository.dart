@@ -198,15 +198,78 @@ class LedgerRepository implements LedgerPort {
     );
   }
 
+  /// UC4. A stock purchase (FR7) may list the products bought: each line adds
+  /// its quantity to stock through `v_stock_level`. The amount is what the
+  /// trader says they paid; it need not equal the lines' total (a discount or
+  /// a delivery fee), so it is not recomputed here.
   @override
-  Future<EntryRow> recordExpense(ExpenseDraft d) => _record(
-    type: EntryType.expense,
-    amountNgwee: d.amountNgwee,
-    description: d.description,
-    categoryCode: d.categoryCode,
-    method: d.method,
-    suggestion: d.suggestion,
-  );
+  Future<EntryRow> recordExpense(ExpenseDraft d) async {
+    if (d.lines.isNotEmpty && d.categoryCode != stockPurchaseCategory) {
+      throw ArgumentError.value(
+        d.categoryCode,
+        'categoryCode',
+        'only a stock purchase can list products',
+      );
+    }
+    final lines = d.lines.isEmpty
+        ? const <_PricedLine>[]
+        : await _checkPurchaseLines(d.lines);
+    return _record(
+      type: EntryType.expense,
+      amountNgwee: d.amountNgwee,
+      description: d.description,
+      categoryCode: d.categoryCode,
+      method: d.method,
+      suggestion: d.suggestion,
+      lines: lines,
+    );
+  }
+
+  /// Each product once, a quantity above zero, a cost not below zero, and a
+  /// product of this business.
+  Future<List<_PricedLine>> _checkPurchaseLines(
+    List<PurchaseLine> lines,
+  ) async {
+    final business = await _business.id();
+    final seen = <String>{};
+    final checked = <_PricedLine>[];
+    for (final line in lines) {
+      if (line.quantity <= 0) {
+        throw ArgumentError.value(
+          line.quantity,
+          'quantity',
+          'must be above zero',
+        );
+      }
+      if (line.unitCostNgwee < 0) {
+        throw ArgumentError.value(
+          line.unitCostNgwee,
+          'unitCostNgwee',
+          'cannot be negative',
+        );
+      }
+      if (!seen.add(line.productId)) {
+        throw ArgumentError.value(line.productId, 'productId', 'listed twice');
+      }
+      final product =
+          await (_db.select(_db.product)..where(
+                (p) =>
+                    p.id.equals(line.productId) & p.businessId.equals(business),
+              ))
+              .getSingleOrNull();
+      if (product == null) {
+        throw ArgumentError.value(
+          line.productId,
+          'productId',
+          'no such product',
+        );
+      }
+      checked.add(
+        _PricedLine(line.productId, line.quantity, line.unitCostNgwee),
+      );
+    }
+    return checked;
+  }
 
   /// UC2 / UC4: validate, score for anomalies, then insert in one transaction.
   Future<EntryRow> _record({
@@ -342,6 +405,24 @@ class LedgerRepository implements LedgerPort {
       final items = await (_db.select(
         _db.entryItem,
       )..where((i) => i.entryId.equals(id))).get();
+      // Cancelling a purchase takes its stock back out. If some of it has been
+      // sold since, that would leave stock below zero, so it is refused: the
+      // trader corrects the count with "Adjust stock" instead.
+      if (original.entryType == 'expense') {
+        for (final item in items) {
+          final r = await _db
+              .customSelect(
+                'SELECT stock_qty FROM v_stock_level WHERE product_id = ?',
+                variables: [Variable(item.productId)],
+              )
+              .getSingle();
+          if (r.read<int>('stock_qty') - item.quantity < 0) {
+            throw StateError(
+              'Some of this stock has already been sold; adjust the stock instead',
+            );
+          }
+        }
+      }
       for (final item in items) {
         await _db
             .into(_db.entryItem)

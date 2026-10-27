@@ -220,6 +220,23 @@ class SaleDraft {
   final Suggestion? suggestion;
 }
 
+/// One product bought on a stock-purchase expense (FR7).
+class PurchaseLine {
+  const PurchaseLine({
+    required this.productId,
+    required this.quantity,
+    required this.unitCostNgwee,
+  });
+
+  final String productId;
+  final int quantity;
+
+  /// What the trader paid for one item; stored in `entry_item.unit_price_ngwee`.
+  final int unitCostNgwee;
+
+  int get totalNgwee => quantity * unitCostNgwee;
+}
+
 class ExpenseDraft {
   const ExpenseDraft({
     required this.amountNgwee,
@@ -227,13 +244,19 @@ class ExpenseDraft {
     required this.categoryCode,
     required this.method,
     this.suggestion,
+    this.lines = const [],
   });
 
+  /// The amount paid. With [lines] it defaults to their total, but the trader
+  /// may overwrite it (a discount, a delivery fee).
   final int amountNgwee;
   final String description;
   final String categoryCode;
   final PaymentMethod method;
   final Suggestion? suggestion;
+
+  /// Products bought; only on a "Stock purchase" expense. Empty otherwise.
+  final List<PurchaseLine> lines;
 }
 
 class ProductDraft {
