@@ -5,9 +5,12 @@ import '../../app/view_data.dart';
 import '../../core/theme/tokens.dart';
 import '../widgets/building_blocks.dart';
 import '../widgets/choices.dart';
+import 'product_form_screen.dart';
 import 'tab_scaffold.dart';
 
 /// S14 Adjust stock (FR7): a counted, damaged or other change to one product.
+/// "Edit" opens S13 for the product's name, price and reorder level, and
+/// "Stop selling" (UC9).
 class AdjustStockScreen extends StatefulWidget {
   const AdjustStockScreen({super.key, required this.productId});
 
@@ -48,7 +51,27 @@ class _AdjustStockScreenState extends State<AdjustStockScreen> {
       builder: (context, snap) {
         final p = snap.data;
         return Scaffold(
-          appBar: detailAppBar(p?.name ?? ''),
+          appBar: detailAppBar(
+            p?.name ?? '',
+            actions: [
+              if (p != null)
+                TextButton.icon(
+                  key: const Key('edit-product'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => ProductFormScreen(product: p),
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.ink,
+                    minimumSize: const Size(AppSizes.touch, AppSizes.touch),
+                  ),
+                  icon: const Icon(Icons.edit_outlined),
+                  label: const Text('Edit'),
+                ),
+              const SizedBox(width: AppSpace.sm),
+            ],
+          ),
           body: p == null
               ? const SizedBox.shrink()
               : SafeArea(

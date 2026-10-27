@@ -108,7 +108,15 @@ class StockRepository implements StockPort {
 
     await _db.transaction(() async {
       final existingId = d.id;
+      final sameName =
+          await (_db.select(_db.product)..where(
+                (p) => p.businessId.equals(business) & p.name.equals(name),
+              ))
+              .getSingleOrNull();
       if (existingId != null) {
+        if (sameName != null && sameName.id != existingId) {
+          throw DuplicateProductName(name);
+        }
         await (_db.update(
           _db.product,
         )..where((p) => p.id.equals(existingId))).write(
@@ -119,6 +127,11 @@ class StockRepository implements StockPort {
             updatedAt: Value(now),
           ),
         );
+        return;
+      }
+      if (sameName != null) {
+        if (sameName.isActive == 1) throw DuplicateProductName(name);
+        await _bringBack(sameName.id!, d, now);
         return;
       }
       final id = _uuid.v4();
@@ -150,6 +163,53 @@ class StockRepository implements StockPort {
             );
       }
     });
+  }
+
+  /// Adding a product the trader stopped selling reuses its row: the name is
+  /// unique per business, and its history stays with it. "Stock now" on the
+  /// form is the count today, so the difference from the derived stock is
+  /// recorded as a counted adjustment.
+  Future<void> _bringBack(String id, ProductDraft d, int now) async {
+    await (_db.update(_db.product)..where((p) => p.id.equals(id))).write(
+      ProductCompanion(
+        unitPriceNgwee: Value(d.priceNgwee),
+        reorderLevel: Value(d.reorderLevel),
+        isActive: const Value(1),
+        updatedAt: Value(now),
+      ),
+    );
+    // v_stock_level only shows active products, so read it after the update.
+    final current = _toRow((await _product(id).get()).single).inStock;
+    final delta = d.openingStock - current;
+    if (delta != 0) {
+      await _db
+          .into(_db.stockAdjustment)
+          .insert(
+            StockAdjustmentCompanion.insert(
+              id: Value(_uuid.v4()),
+              productId: id,
+              quantityDelta: delta,
+              reason: 'count',
+              createdAt: now,
+            ),
+          );
+    }
+  }
+
+  @override
+  Future<void> stopSelling(String productId) async {
+    final business = await _business.id();
+    final changed =
+        await (_db.update(_db.product)..where(
+              (p) => p.id.equals(productId) & p.businessId.equals(business),
+            ))
+            .write(
+              ProductCompanion(
+                isActive: const Value(0),
+                updatedAt: Value(_nowMs()),
+              ),
+            );
+    if (changed == 0) throw StateError('No product $productId');
   }
 
   /// A counted, damaged or other change. Stock may not go below zero.

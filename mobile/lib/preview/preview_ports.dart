@@ -399,6 +399,23 @@ class _PreviewStock implements StockPort {
 
   @override
   Future<void> saveProduct(ProductDraft d) async {
+    final id = d.id;
+    if (id != null) {
+      _products.value = [
+        for (final p in _products.value)
+          p.id == id
+              ? ProductRow(
+                  id: p.id,
+                  name: d.name,
+                  priceNgwee: d.priceNgwee,
+                  inStock: p.inStock,
+                  reorderLevel: d.reorderLevel,
+                  isLow: p.inStock <= d.reorderLevel,
+                )
+              : p,
+      ];
+      return;
+    }
     _products.value = [
       ..._products.value,
       ProductRow(
@@ -426,6 +443,14 @@ class _PreviewStock implements StockPort {
                 isLow: p.isLow,
               )
             : p,
+    ];
+  }
+
+  @override
+  Future<void> stopSelling(String productId) async {
+    _products.value = [
+      for (final p in _products.value)
+        if (p.id != productId) p,
     ];
   }
 }

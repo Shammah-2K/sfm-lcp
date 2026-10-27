@@ -131,10 +131,17 @@ class _CodePill extends StatelessWidget {
   }
 }
 
-/// The header of a screen below a tab: back arrow, optional icon, title.
-AppBar detailAppBar(String title, {IconData? icon, Color? iconColor}) {
+/// The header of a screen below a tab: back arrow, optional icon, title,
+/// optional actions on the right.
+AppBar detailAppBar(
+  String title, {
+  IconData? icon,
+  Color? iconColor,
+  List<Widget>? actions,
+}) {
   return AppBar(
     toolbarHeight: 64,
+    actions: actions,
     title: Row(
       children: [
         if (icon != null) ...[

@@ -253,8 +253,12 @@ class LedgerRepository implements LedgerPort {
       }
       final product =
           await (_db.select(_db.product)..where(
+                // A product no longer sold is refused, as in a sale: its stock
+                // would rise where the trader cannot see it.
                 (p) =>
-                    p.id.equals(line.productId) & p.businessId.equals(business),
+                    p.id.equals(line.productId) &
+                    p.businessId.equals(business) &
+                    p.isActive.equals(1),
               ))
               .getSingleOrNull();
       if (product == null) {
@@ -415,7 +419,10 @@ class LedgerRepository implements LedgerPort {
                 'SELECT stock_qty FROM v_stock_level WHERE product_id = ?',
                 variables: [Variable(item.productId)],
               )
-              .getSingle();
+              .getSingleOrNull();
+          // No row: the trader stopped selling it, so there is no stock to
+          // protect. If they add it again, "Stock now" sets the count.
+          if (r == null) continue;
           if (r.read<int>('stock_qty') - item.quantity < 0) {
             throw StateError(
               'Some of this stock has already been sold; adjust the stock instead',

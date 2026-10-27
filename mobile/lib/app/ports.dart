@@ -62,9 +62,26 @@ abstract interface class StockPort {
 
   Stream<ProductRow?> watchProduct(String id);
 
+  /// Adds or edits a product. Adding a name the trader stopped selling brings
+  /// that product back. Throws [DuplicateProductName] if another product in
+  /// the list already has the name.
   Future<void> saveProduct(ProductDraft draft);
 
   Future<void> adjust(StockAdjustmentDraft draft);
+
+  /// UC9: hides the product from the stock list and the sale screen. Nothing
+  /// is deleted; past sales and purchases keep pointing at it.
+  Future<void> stopSelling(String productId);
+}
+
+/// Product names are unique per business (`UNIQUE (business_id, name)`).
+class DuplicateProductName implements Exception {
+  const DuplicateProductName(this.name);
+
+  final String name;
+
+  @override
+  String toString() => 'DuplicateProductName: $name';
 }
 
 abstract interface class SyncPort {

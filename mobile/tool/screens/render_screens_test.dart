@@ -228,6 +228,16 @@ void main() {
     await shot(tester, 's13_new_product');
   });
 
+  testWidgets('S13b edit product, S13c stop selling', (tester) async {
+    await launch(tester);
+    await tap(tester, byKey('tab-stock'));
+    await tap(tester, byKey('product-p1'));
+    await tap(tester, byKey('edit-product'));
+    await shot(tester, 's13b_edit_product');
+    await tap(tester, byKey('stop-selling'));
+    await shot(tester, 's13c_stop_selling');
+  });
+
   testWidgets('S14 adjust stock', (tester) async {
     await launch(tester);
     await tap(tester, byKey('tab-stock'));

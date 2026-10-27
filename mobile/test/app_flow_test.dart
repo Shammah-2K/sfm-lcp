@@ -264,6 +264,16 @@ void main() {
       await scrollThrough(tester);
     });
 
+    testWidgets('Edit product and the stop-selling dialog', (tester) async {
+      await small(tester);
+      await tap(tester, byKey('tab-stock'));
+      await tap(tester, byKey('product-p3'));
+      await tap(tester, byKey('edit-product'));
+      await scrollThrough(tester);
+      await tap(tester, byKey('stop-selling'));
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('Sale products, entry detail, new product', (tester) async {
       await small(tester);
       await tap(tester, byKey('new-sale'));
