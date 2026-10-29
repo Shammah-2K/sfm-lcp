@@ -34,14 +34,19 @@ class SyncStatusRepository implements SyncPort {
         "  WHERE status <> 'acked' AND entity_table <> 'entry_item') AS waiting, "
         '(SELECT MAX(acked_at) FROM sync_record) AS last, '
         "EXISTS (SELECT 1 FROM app_state WHERE name = 'withdrawn_at') AS withdrawn, "
-        '(SELECT value FROM app_state WHERE name = ?) AS problem',
-        variables: [Variable(AppStateNames.codeProblem)],
+        '(SELECT value FROM app_state WHERE name = ?) AS problem, '
+        '(SELECT value FROM app_state WHERE name = ?) AS trouble',
+        variables: [
+          Variable(AppStateNames.codeProblem),
+          Variable(AppStateNames.syncTrouble),
+        ],
         readsFrom: {_db.syncRecord, _db.appState},
       )
       .watchSingle()
       .map((r) {
         final last = r.readNullable<int>('last');
         final problem = r.readNullable<String>('problem');
+        final trouble = r.readNullable<String>('trouble');
         return SyncView(
           waiting: r.read<int>('waiting'),
           withdrawn: r.read<bool>('withdrawn'),
@@ -50,6 +55,7 @@ class SyncStatusRepository implements SyncPort {
               : DateTime.fromMillisecondsSinceEpoch(last, isUtc: true),
           enabled: _scheduler != null,
           problem: problem == null ? null : CodeCheck.values.byName(problem),
+          trouble: trouble == null ? null : SyncTrouble.values.byName(trouble),
         );
       });
 

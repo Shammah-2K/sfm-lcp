@@ -113,8 +113,16 @@ class FakeServer implements SyncApi {
     );
   }
 
+  /// As on a project where "Allow anonymous sign-ins" is off.
+  bool anonymousSignInsDisabled = false;
+
   @override
   Future<AuthSession> signInAnonymously() => _call(null, (_) {
+    if (anonymousSignInsDisabled) {
+      throw const SyncServerException(
+        '422 anonymous_provider_disabled: Anonymous sign-ins are disabled',
+      );
+    }
     signIns++;
     return _issue('user${_users++}');
   });

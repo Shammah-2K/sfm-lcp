@@ -114,6 +114,29 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('a server that refuses is explained, not shown as no network', (
+    tester,
+  ) async {
+    await launch(
+      tester,
+      before: (db) async {
+        final ports = buildAppPorts(db);
+        await ports.session.recordConsent();
+        await ports.session.start('LSK01', BusinessType.shop);
+        await ports.session.dismissHints();
+      },
+    );
+    server.anonymousSignInsDisabled = true;
+    await tap(tester, find.byKey(const Key('sync-badge')).first);
+    await tap(tester, byKey('sync-now'));
+    await tester.runAsync(() => Future<void>.delayed(Durations.medium1));
+    await tester.pumpAndSettle();
+    expect(byKey('sync-trouble-server'), findsOneWidget);
+    expect(find.textContaining("Can't reach the study server"), findsOneWidget);
+    expect(byKey('sync-now'), findsOneWidget, reason: 'can try again');
+    await finish(tester);
+  });
+
   testWidgets('a blocked code is explained in the sheet', (tester) async {
     await launch(
       tester,

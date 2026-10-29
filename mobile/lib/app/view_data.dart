@@ -189,6 +189,16 @@ enum CodeCheck {
   withdrawn,
 }
 
+/// How the last sync attempt failed.
+enum SyncTrouble {
+  /// No network, or no answer: normal for a trader; it retries by itself.
+  noNetwork,
+
+  /// The server answered but refused (e.g. sign-in switched off): needs the
+  /// researcher.
+  server,
+}
+
 class SyncView {
   const SyncView({
     required this.waiting,
@@ -196,6 +206,7 @@ class SyncView {
     this.withdrawn = false,
     this.enabled = true,
     this.problem,
+    this.trouble,
   });
 
   /// Records saved on the phone and not yet sent (FR9).
@@ -211,6 +222,9 @@ class SyncView {
 
   /// Why records cannot be sent: the code is not usable. Null when fine.
   final CodeCheck? problem;
+
+  /// How the last attempt failed; null if it got through.
+  final SyncTrouble? trouble;
 }
 
 /// A quantity of one product in a quick sale (FR6).

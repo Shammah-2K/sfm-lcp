@@ -5,9 +5,13 @@ record it in the AI assistance log. Covers FR9, NFR4, UC11 and decision D6 (agre
 anonymous sign-in per install, codes LSK01–LSK20, one install per code, check at onboarding when
 online, server-side deletion on withdrawal). FR10 (dashboard) is not started.
 
-**Not yet run against your Supabase project.** The app side is tested against an in-memory
-server with the same rules (`test/sync/fake_server.dart`). The SQL itself is tested in real
-PostgreSQL 15 (section 5b). Section 6 lists what to check on your project.
+**Run against your Supabase project on 29 Oct 2026:** your phone (code LSK1) signed in, claimed
+its code and sent its 11 waiting records; the badge then showed all sent, and the server reported
+LSK1 as taken. On the live project an anonymous caller reads no rows and is refused all
+functions except `check_code`. The first attempt failed because anonymous sign-ins were still
+off; the app showed nothing useful, which led to the new "Can't reach the study server" line.
+The app side is also tested against an in-memory server with the same rules
+(`test/sync/fake_server.dart`), and the SQL in real PostgreSQL 15 (section 5b).
 
 ## 1. What changed for the user
 
@@ -19,6 +23,7 @@ PostgreSQL 15 (section 5b). Section 6 lists what to check on your project.
 | If the code is refused later, the sheet says why and to show it to the researcher | D6 |
 | "Stop taking part" now asks the server to delete its copy (as the dialog promised in Phase 3) | ethics |
 | A build without the server's address says "This copy of the app does not send them to the study" | — |
+| After a failed try, the sheet says "Last try: no network" (normal) or "Can't reach the study server … show this to the researcher" (the server refused, e.g. sign-in switched off) | FR9, fieldwork |
 
 ## 2. Read in this order
 
@@ -142,6 +147,6 @@ three roles, and a test checks it.
 
 ```bash
 cd mobile
-flutter test                                     # 145 tests
+flutter test                                     # 148 tests
 flutter test test/sync/nfr4_harness_test.dart    # prints the NFR4 line
 ```

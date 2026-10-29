@@ -90,6 +90,8 @@ class SyncWorker {
           (s) => session = s,
         );
         if (status != CodeStatus.ok) {
+          // The server answered; the code problem says what is wrong.
+          await _clearTrouble();
           await _set(AppStateNames.codeProblem, status.name);
           return SyncOutcome.blocked;
         }
@@ -98,7 +100,10 @@ class SyncWorker {
       }
       while (true) {
         final rows = await _takeBatch();
-        if (rows.isEmpty) return SyncOutcome.sent;
+        if (rows.isEmpty) {
+          await _clearTrouble();
+          return SyncOutcome.sent;
+        }
         try {
           final batch = await _batchFor(rows);
           await _withAuth(
@@ -112,13 +117,32 @@ class SyncWorker {
         }
         await _markAcked(rows);
       }
-    } on SyncOfflineException {
+    } on SyncOfflineException catch (e) {
+      await _setTrouble('noNetwork', e);
       return SyncOutcome.offline;
-    } on SyncServerException {
+    } on SyncServerException catch (e) {
+      // e.g. anonymous sign-ins switched off, or a batch refused
+      await _setTrouble('server', e);
       return SyncOutcome.failed;
-    } on SyncAuthException {
+    } on SyncAuthException catch (e) {
+      await _setTrouble('server', e);
       return SyncOutcome.failed;
     }
+  }
+
+  /// Remembers how this run failed, for the account sheet.
+  Future<void> _setTrouble(String kind, Object error) async {
+    await _set(AppStateNames.syncTrouble, kind);
+    final detail = '$error';
+    await _set(
+      AppStateNames.syncTroubleDetail,
+      detail.length > 500 ? detail.substring(0, 500) : detail,
+    );
+  }
+
+  Future<void> _clearTrouble() async {
+    await _clear(AppStateNames.syncTrouble);
+    await _clear(AppStateNames.syncTroubleDetail);
   }
 
   // ------------------------------------------------------------- withdrawal

@@ -431,6 +431,36 @@ class _SyncSheetState extends State<_SyncSheet> {
                 key: const Key('sync-explainer'),
                 style: sync.problem == null ? AppText.body : AppText.label,
               ),
+              if (sync.enabled && sync.problem == null && n > 0)
+                ...switch (sync.trouble) {
+                  SyncTrouble.server => [
+                    const SizedBox(height: AppSpace.md),
+                    const Row(
+                      key: Key('sync-trouble-server'),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.error_outline, color: AppColors.ink),
+                        SizedBox(width: AppSpace.sm),
+                        Expanded(
+                          child: Text(
+                            "Can't reach the study server. If this keeps "
+                            'happening, show this to the researcher.',
+                            style: AppText.label,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  SyncTrouble.noNetwork => [
+                    const SizedBox(height: AppSpace.sm),
+                    const Text(
+                      'Last try: no network.',
+                      key: Key('sync-trouble-network'),
+                      style: AppText.caption,
+                    ),
+                  ],
+                  null => const <Widget>[],
+                },
               if (sync.enabled && sync.problem == null && n > 0) ...[
                 const SizedBox(height: AppSpace.md),
                 _SyncNowButton(onSync: onSyncNow),

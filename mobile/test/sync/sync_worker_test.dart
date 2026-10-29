@@ -215,6 +215,32 @@ void main() {
     });
   });
 
+  group('how the last attempt failed', () {
+    Future<SyncView> view() => phone.ports.sync.watch().first;
+
+    test('no network is remembered, and cleared once sent', () async {
+      server.queued.addAll([Fault.none, Fault.none, Fault.offline]);
+      await worker.runOnce();
+      expect((await view()).trouble, SyncTrouble.noNetwork);
+      await worker.runOnce();
+      expect((await view()).trouble, isNull);
+    });
+
+    test(
+      'a server that refuses sign-in is told apart from no network',
+      () async {
+        server.anonymousSignInsDisabled = true;
+        expect(await worker.runOnce(), SyncOutcome.failed);
+        expect((await view()).trouble, SyncTrouble.server);
+        expect(await phone.waiting(), greaterThan(0), reason: 'nothing lost');
+
+        server.anonymousSignInsDisabled = false;
+        expect(await worker.runOnce(), SyncOutcome.sent);
+        expect((await view()).trouble, isNull);
+      },
+    );
+  });
+
   test('failed rows keep the error and the number of attempts', () async {
     server.queued.addAll([Fault.none, Fault.none, Fault.offline]);
     await worker.runOnce();

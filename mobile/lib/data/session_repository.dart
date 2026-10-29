@@ -30,6 +30,13 @@ abstract final class AppStateNames {
 
   /// Epoch ms when the server confirmed the withdrawal and deleted its copy.
   static const String withdrawConfirmedAt = 'withdraw_confirmed_at';
+
+  /// How the last sync attempt failed: a `SyncTrouble` name (`noNetwork`,
+  /// `server`). Absent after a run that got through.
+  static const String syncTrouble = 'sync_trouble';
+
+  /// The error behind [syncTrouble], for the researcher; not shown to traders.
+  static const String syncTroubleDetail = 'sync_trouble_detail';
 }
 
 /// First launch and the participant who owns this phone (FR11, ethics).
