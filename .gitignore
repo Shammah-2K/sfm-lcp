@@ -139,3 +139,6 @@ tmp/
 temp/
 # Supabase project URL and anon key for builds (copy supabase.example.json)
 mobile/supabase.json
+
+# Dashboard config: project URL and publishable key (copy config.example.js)
+dashboard/config.js

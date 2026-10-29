@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs the migration and its tests in a throwaway PostgreSQL container.
+# Runs the migrations and their tests in a throwaway PostgreSQL container.
 #   bash backend/supabase/tests/run.sh
 # Needs Docker. Uses postgres:15 (the major version Supabase runs).
 set -euo pipefail
@@ -20,8 +20,12 @@ done
 psql() { docker exec -i "$name" psql -U postgres -v ON_ERROR_STOP=1 -q "$@"; }
 
 psql < "$here/00_supabase_stub.sql"
-psql < "$here/../migrations/20261027000000_sync.sql"
+for m in "$here"/../migrations/*.sql; do psql < "$m"; done
 psql < "$here/../seed_codes.sql"
-# Show only the checks and errors, not the empty result of each call.
-psql -t < "$here/sync_functions_test.sql" 2>&1 | grep -E 'NOTICE|ERROR|FAILED|CONTEXT|PASSED'
-exit "${PIPESTATUS[0]}"
+# One session for both files: the dashboard tests use the sync tests'
+# helpers and data. Show only the checks and errors.
+cat "$here/sync_functions_test.sql" "$here/dashboard_test.sql" \
+  | psql -t 2>&1 | grep -E 'NOTICE|ERROR|FAILED|CONTEXT'
+status="${PIPESTATUS[1]}"
+[ "$status" -eq 0 ] && echo 'ALL SQL CHECKS PASSED'
+exit "$status"

@@ -198,5 +198,4 @@ select public.release_code('LSK02');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000000c');
 select pg_temp.check(public.claim_code('LSK02') = 'ok', 'release: a new phone can claim a released code');
 select pg_temp.as_admin();
-
-\echo 'ALL SQL CHECKS PASSED'
+-- dashboard_test.sql continues in the same session, with these helpers.

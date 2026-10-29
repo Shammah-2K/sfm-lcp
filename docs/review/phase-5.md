@@ -3,7 +3,7 @@
 Branch `feature/data-layer`. Written by Claude Code under the 25 Oct 2026 working agreement;
 record it in the AI assistance log. Covers FR9, NFR4, UC11 and decision D6 (agreed 27 Oct 2026:
 anonymous sign-in per install, codes LSK01–LSK20, one install per code, check at onboarding when
-online, server-side deletion on withdrawal). FR10 (dashboard) is not started.
+online, server-side deletion on withdrawal). FR10 (dashboard) is in section 8.
 
 **Run against your Supabase project on 29 Oct 2026:** your phone (code LSK1) signed in, claimed
 its code and sent its 11 waiting records; the badge then showed all sent, and the server reported
@@ -65,13 +65,13 @@ is never synced. It only gives access to the four functions, and only for this i
 code. If it is ever lost (app data cleared), the phone signs in as a new install and is refused
 the code as "taken" until you run `release_code`. That is decision C working as intended.
 
-### 3.5 Sync runs only while the app is open
+### 3.5 Sync runs only while the app is open (decided 29 Oct 2026)
 
-The plan mentioned a WorkManager background job. I did not add it: it needs a native plugin and a
-second database connection in a background isolate, which is a real risk to the offline-first
-guarantees 13 days before supervision. Traders open the app many times a day, and each opening,
-save and resume triggers a sync. **Your call:** keep this (and say so in Chapter 5), or ask for
-background sync as a follow-up.
+The plan mentioned a WorkManager background job. It was left out: it needs a native plugin and a
+second database connection in a background isolate, a real risk to the offline-first guarantees
+this close to supervision. Traders open the app many times a day, and each opening, save and
+resume triggers a sync. **Decided: foreground only;** state it as a limitation and future work in
+Chapter 5.
 
 ### 3.6 A code refused after onboarding
 
@@ -150,3 +150,35 @@ cd mobile
 flutter test                                     # 148 tests
 flutter test test/sync/nfr4_harness_test.dart    # prints the NFR4 line
 ```
+
+## 8. The research dashboard (FR10, UC12)
+
+Decided 29 Oct 2026: the dashboard is for the **researcher**, as a static page in the repo. UC12's
+actor changes from "business owner" to "researcher" in Chapter 3 (traders have no web sign-in under
+D6, and codes are not secrets).
+
+**Read in this order:** `backend/supabase/migrations/20261029000000_dashboard.sql` (the
+`researcher` list, read-only policies, four `security_invoker` views), then `dashboard/index.html`,
+then `dashboard/README.md` for your set-up steps.
+
+**Decisions to check**
+
+- *Who can read:* only accounts in `public.researcher`. Phones are signed in too (anonymously), so
+  a test checks that a phone reads nothing, from tables and views alike.
+- *Views keep the rules:* a Supabase view normally runs as its owner and would bypass the
+  policies; these are `security_invoker`, and a test checks it.
+- *Read-only:* no insert, update or delete policies. Supabase grants UPDATE by default, but an
+  update by the researcher matches no rows (tested).
+- *Money:* net of cancellations, because a cancellation is a negative row. Days are Lusaka days.
+  Stock is derived the same way as the phone's `v_stock_level` (tested: 10 + 5 − 2 = 13).
+- *Safety:* participant text is inserted as text, never HTML (checked in the browser with a
+  description containing `<b>`).
+- *Chart colours:* money in and out keep the app's teal and orange-red, nudged to steps that pass
+  the palette checker in light and dark (`#0D9488`/`#C2410C`, `#139A8D`/`#D2541A`). Every chart
+  has a "Show as table" view.
+
+**Tested:** the SQL in PostgreSQL 15 (`bash backend/supabase/tests/run.sh`, 54 checks with the
+sync tests, all passing on 29 Oct 2026). The page was checked in a browser with sample data
+injected in the tab: the overview, a participant, the chart tooltip, the table toggle, phone width
+(no sideways scrolling) and dark mode. **Not yet checked against your live data:** that needs
+your researcher account (dashboard/README.md, steps 1–3).
