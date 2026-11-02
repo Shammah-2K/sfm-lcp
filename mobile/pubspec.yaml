@@ -24,3 +24,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    # Written by ml/train_categoriser.py.
+    - assets/models/

@@ -1,0 +1,9 @@
+# The ML pipeline (make_corpus.py, train_categoriser.py, tests). Python 3.14.
+#   python -m venv ml/.venv
+#   ml/.venv/Scripts/python -m pip install -r ml/requirements-pipeline.txt
+# requirements.txt (Jupyter etc.) is separate.
+scikit-learn==1.8.0
+numpy==2.4.4
+scipy==1.17.1
+PyYAML==6.0.3
+pytest==9.2.0
