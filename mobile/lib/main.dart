@@ -5,6 +5,7 @@ import 'app/app.dart';
 import 'app/app_ports.dart';
 import 'app/ports.dart';
 import 'data/database.dart';
+import 'domain/isolation_forest_detector.dart';
 import 'domain/models.dart';
 import 'domain/tfidf_categoriser.dart';
 import 'sync/supabase_sync_api.dart';
@@ -25,6 +26,7 @@ Future<void> main() async {
       ports: buildAppPorts(
         db,
         categoriser: await _loadCategoriser(),
+        detector: await _loadDetector(),
         syncScheduler: scheduler,
       ),
     ),
@@ -40,5 +42,15 @@ Future<CategoryPort> _loadCategoriser() async {
   } catch (e) {
     debugPrint('Categoriser not loaded: $e');
     return const NoCategoriser();
+  }
+}
+
+/// The bundled detector, or none: then nothing is flagged (FR4 off).
+Future<AnomalyDetector> _loadDetector() async {
+  try {
+    return await IsolationForestDetector.load(rootBundle);
+  } catch (e) {
+    debugPrint('Detector not loaded: $e');
+    return const NoAnomalyDetector();
   }
 }

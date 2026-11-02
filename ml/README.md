@@ -8,9 +8,26 @@ training and evaluation, and writes up the results.**
 templates/categoriser_templates.yaml   templates and word lists (draft: review and edit)
 make_corpus.py                         templates -> data/processed/corpus.csv
 train_categoriser.py                   evaluate, then export the model to the app
-tests/                                 pytest checks for the generator
-out/                                   metrics and model written by training (yours to commit)
+make_amounts.py                        synthetic ledgers with injected slips -> data/processed/amounts.csv
+anomaly_features.py                    the detector's features (the phone computes the same)
+train_detector.py                      Isolation Forest: evaluate, then export to the app
+tests/                                 pytest checks for the generators and features
+out/                                   metrics and models written by training (yours to commit)
 ```
+
+## The anomaly detector
+
+`make_amounts.py` writes 80 synthetic traders over 90 days. Each has a usual amount per category,
+and about 2% of entries are replaced by a typing slip: an extra zero (×10, ×100), a dropped zero
+(÷10) or a misplaced decimal point (÷100). **The amount scales and frequencies at the top of the
+file are assumptions to check** against what Lusaka traders spend and earn.
+
+`train_detector.py` computes each entry's features from that trader's *earlier* entries in the same
+category only (as the phone does), fits an Isolation Forest on 75% of traders (labels unused),
+chooses the flagging threshold on those traders, and reports precision, recall and recall per kind
+of slip on the other 25%. Run: `.venv/Scripts/python make_amounts.py` then
+`.venv/Scripts/python train_detector.py`, then in `mobile/`
+`flutter test test/domain/detector_parity_test.dart`.
 
 ## Your workflow
 
