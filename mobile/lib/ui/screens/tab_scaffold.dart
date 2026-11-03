@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../app/ports_scope.dart';
+import '../../app/researcher_mode.dart';
 import '../../app/view_data.dart';
 import '../../core/theme/tokens.dart';
 import '../widgets/ledger_widgets.dart';
@@ -99,6 +100,20 @@ class _CodePill extends StatelessWidget {
   final String code;
   final VoidCallback onTap;
 
+  /// Long-press: researcher mode on or off (D8), for this app session only.
+  static void _toggleResearcherMode(BuildContext context) {
+    researcherMode.value = !researcherMode.value;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            researcherMode.value ? 'Researcher mode on' : 'Researcher mode off',
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -108,6 +123,7 @@ class _CodePill extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.pill),
         onTap: onTap,
+        onLongPress: () => _toggleResearcherMode(context),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: AppSizes.touch),
           child: Center(

@@ -212,6 +212,7 @@ class TfidfCategoriser implements CategoryPort {
       top: top,
       preselect: top.first.confidence >= confidenceCutoff,
       modelVersion: modelVersion,
+      elapsedMicros: lastElapsedMicros,
     );
   }
 }

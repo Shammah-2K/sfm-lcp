@@ -141,6 +141,7 @@ class Suggestion {
     required this.top,
     required this.preselect,
     required this.modelVersion,
+    this.elapsedMicros,
   });
 
   /// Best first; at most three.
@@ -151,6 +152,9 @@ class Suggestion {
 
   /// Stored in `ledger_entry.model_version` beside the prediction.
   final String modelVersion;
+
+  /// How long the prediction took on this phone; shown in researcher mode.
+  final int? elapsedMicros;
 }
 
 class ProductRow {

@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sfm_lcp/app/app.dart';
+import 'package:sfm_lcp/app/researcher_mode.dart';
 import 'package:sfm_lcp/core/theme/tokens.dart';
+import 'package:sfm_lcp/app/view_data.dart';
 import 'package:sfm_lcp/preview/preview_ports.dart';
 
 /// Drives the UI through each flow on the preview data.
 void main() {
+  tearDown(() => researcherMode.value = false);
+
   Future<void> launch(
     WidgetTester tester, {
     String? participant = 'LSK01',
@@ -68,7 +72,8 @@ void main() {
     await tester.enterText(byKey('description'), 'bus fare to Matero');
     await tester.pump(AppSizes.suggestionDebounce);
     await tester.pumpAndSettle();
-    expect(find.text('Suggested on this phone · 99% sure'), findsOneWidget);
+    expect(find.text('Suggested on this phone'), findsOneWidget);
+    expect(byKey('researcher-caption'), findsNothing, reason: 'D8');
     expect(find.text('Save expense (−K25.00)'), findsOneWidget);
     expect(enabled(tester), isTrue, reason: 'Transport is preselected');
 
@@ -81,6 +86,41 @@ void main() {
       find.text('bus fare to Matero', skipOffstage: false),
       findsNWidgets(2),
     );
+  });
+
+  testWidgets(
+    'D8: long-pressing the code shows confidence, until pressed again',
+    (tester) async {
+      await launch(tester);
+      await tester.longPress(find.text('LSK01'));
+      await tester.pumpAndSettle();
+      expect(find.text('Researcher mode on'), findsOneWidget);
+
+      await tap(tester, byKey('new-expense'));
+      await tester.enterText(byKey('description'), 'bus fare to Matero');
+      await tester.pump(AppSizes.suggestionDebounce);
+      await tester.pumpAndSettle();
+      expect(find.text('Suggested on this phone'), findsOneWidget);
+      expect(find.text('99% sure · preview'), findsOneWidget);
+
+      researcherMode.value = false;
+      await tester.pumpAndSettle();
+      expect(byKey('researcher-caption'), findsNothing);
+    },
+  );
+
+  test('D8: researcher mode starts off', () {
+    expect(researcherMode.value, isFalse);
+  });
+
+  test('D8: the researcher line gives confidence, time and version', () {
+    const s = Suggestion(
+      top: [ScoredCategory('transport', 0.874)],
+      preselect: true,
+      modelVersion: 'lr-v2',
+      elapsedMicros: 412,
+    );
+    expect(researcherCaption(s), '87% sure · 0.41 ms · lr-v2');
   });
 
   testWidgets(

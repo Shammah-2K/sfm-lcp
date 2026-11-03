@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../app/ports_scope.dart';
+import '../../app/researcher_mode.dart';
 import '../../app/view_data.dart';
 import '../../core/format/money.dart';
 import '../../core/theme/tokens.dart';
@@ -468,7 +469,6 @@ class _CategoryChoice extends StatelessWidget {
     ];
     final current = selected;
     if (current != null && !codes.contains(current)) codes.add(current);
-    final percent = s == null ? null : (s.top.first.confidence * 100).round();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -485,14 +485,27 @@ class _CategoryChoice extends StatelessWidget {
             OtherCategoryChip(onTap: onOther),
           ],
         ),
-        if (percent != null) ...[
+        if (s != null) ...[
           const SizedBox(height: AppSpace.sm),
           InfoLine(
             key: const Key('suggestion-caption'),
             icon: Icons.auto_awesome_outlined,
-            text: s!.preselect
-                ? 'Suggested on this phone · $percent% sure'
-                : 'Suggested on this phone · $percent% sure — pick one',
+            text: s.preselect
+                ? 'Suggested on this phone'
+                : 'Suggested on this phone — pick one',
+          ),
+          ValueListenableBuilder<bool>(
+            valueListenable: researcherMode,
+            builder: (context, on, _) => on
+                ? Padding(
+                    padding: const EdgeInsets.only(top: AppSpace.xs),
+                    child: Text(
+                      researcherCaption(s),
+                      key: const Key('researcher-caption'),
+                      style: AppText.caption,
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
         ],
       ],
