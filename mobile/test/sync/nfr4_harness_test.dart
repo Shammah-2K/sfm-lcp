@@ -98,6 +98,9 @@ void main() {
       );
       expect(failures, isEmpty);
     },
+    // A correctness check, not a timing one: on a busy machine 50 trials can
+    // pass the default 30 s while finding nothing wrong.
+    timeout: const Timeout(Duration(minutes: 5)),
   );
 }
 
