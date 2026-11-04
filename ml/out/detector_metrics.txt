@@ -1,0 +1,15 @@
+model_version: iforest-v1
+data: synthetic ledgers with injected anomalies (make_amounts.py)
+split by trader: {'by': 'trader', 'test_traders': 20, 'train_traders': 60, 'train_entries': 26569, 'test_entries': 9056}
+threshold (chosen on training traders, best F1): 0.6868
+
+test: threshold 0.6868  precision 0.9183  recall 0.9455  F1 0.9317  normal entries flagged 0.0019  (202 anomalies in 9056 entries)
+    recall   /10: 0.9825 (n=57)
+    recall  /100: 1.0000 (n=24)
+    recall   x10: 0.8701 (n=77)
+    recall  x100: 1.0000 (n=44)
+test_at_0_5: threshold 0.5000  precision 0.2343  recall 1.0000  F1 0.3797  normal entries flagged 0.0745  (202 anomalies in 9056 entries)
+    recall   /10: 1.0000 (n=57)
+    recall  /100: 1.0000 (n=24)
+    recall   x10: 1.0000 (n=77)
+    recall  x100: 1.0000 (n=44)

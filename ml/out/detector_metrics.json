@@ -1,0 +1,73 @@
+{
+ "model_version": "iforest-v1",
+ "data": "synthetic ledgers with injected anomalies (make_amounts.py)",
+ "features": [
+  "log_ratio",
+  "robust_z"
+ ],
+ "min_history": 5,
+ "history_days": 60,
+ "split": {
+  "by": "trader",
+  "test_traders": 20,
+  "train_traders": 60,
+  "train_entries": 26569,
+  "test_entries": 9056
+ },
+ "threshold_chosen_on": "training traders, best F1",
+ "test": {
+  "threshold": 0.6868,
+  "precision": 0.9182692307692307,
+  "recall": 0.9455445544554455,
+  "f1": 0.9317073170731708,
+  "flagged_share_of_normal": 0.001920036141856788,
+  "anomalies": 202,
+  "entries": 9056,
+  "recall_by_kind": {
+   "/10": {
+    "n": 57,
+    "recall": 0.9824561403508771
+   },
+   "/100": {
+    "n": 24,
+    "recall": 1.0
+   },
+   "x10": {
+    "n": 77,
+    "recall": 0.8701298701298701
+   },
+   "x100": {
+    "n": 44,
+    "recall": 1.0
+   }
+  }
+ },
+ "test_at_0_5": {
+  "threshold": 0.5,
+  "precision": 0.23433874709976799,
+  "recall": 1.0,
+  "f1": 0.37969924812030076,
+  "flagged_share_of_normal": 0.07454257962502824,
+  "anomalies": 202,
+  "entries": 9056,
+  "recall_by_kind": {
+   "/10": {
+    "n": 57,
+    "recall": 1.0
+   },
+   "/100": {
+    "n": 24,
+    "recall": 1.0
+   },
+   "x10": {
+    "n": 77,
+    "recall": 1.0
+   },
+   "x100": {
+    "n": 44,
+    "recall": 1.0
+   }
+  }
+ },
+ "reference_vs_sklearn_max_abs_diff": 1.6653345369377348e-16
+}

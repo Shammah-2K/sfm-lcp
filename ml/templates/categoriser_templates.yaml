@@ -15,7 +15,7 @@
 #   * Categories must be exactly the 11 codes of the app codebook.
 
 version: templates-v2
-reviewed: false
+reviewed: true
 
 slots:
   item: [tomatoes, onions, kapenta, mealie meal, cooking oil, sugar, salt, bread, eggs,

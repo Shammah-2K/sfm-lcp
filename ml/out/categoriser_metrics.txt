@@ -1,0 +1,52 @@
+model_version: lr-v2
+data: synthetic, template-generated (make_corpus.py); held-out templates
+split: GroupShuffleSplit by template_id, test_size=0.2, random_state=42, draw 1
+train rows: 8862  test rows: 2262
+
+macro-F1 on held-out templates:
+  keyword baseline (all classes):   0.3776
+  TF-IDF + LR (all classes):        0.5028
+  TF-IDF + LR (within sale/expense): 0.5828
+
+per-class, TF-IDF + LR, all classes:
+               precision    recall  f1-score   support
+
+      airtime     0.9419    0.5704    0.7105       142
+         food     0.9640    0.7086    0.8168       151
+other_expense     0.0088    0.0294    0.0136        34
+ other_income     0.7931    0.4291    0.5569       268
+    rent_levy     0.7375    0.8082    0.7712       219
+  sales_goods     0.2098    1.0000    0.3468       120
+sales_service     0.9463    0.4821    0.6388       475
+        stock     0.2955    0.3457    0.3186       324
+    transport     0.1154    0.0435    0.0632       276
+    utilities     0.9873    0.9509    0.9688       163
+        wages     0.2920    0.3667    0.3251        90
+
+     accuracy                         0.5049      2262
+    macro avg     0.5720    0.5213    0.5028      2262
+ weighted avg     0.6380    0.5049    0.5286      2262
+
+confusion matrix (rows = true, columns = predicted), all classes:
+  airtim   food other_ other_ rent_l sales_ sales_  stock transp utilit  wages
+airtim     81      0      0      0      0      1      0     60      0      0      0
+  food      0    107      0      0      1      4      0      1      8      1     29
+other_      1      0      1      0      0     31      0      1      0      0      0
+other_      0      0     31    115      0     99      1     22      0      0      0
+rent_l      0      0      1      0    177      0      0      0      0      0     41
+sales_      0      0      0      0      0    120      0      0      0      0      0
+sales_      1      0     59     30      0    147    229      3      3      0      3
+ stock      3      3      0      0      4    121      0    112     81      0      0
+transp      0      1     21      0     50      5      0    179     12      1      7
+utilit      0      0      0      0      8      0      0      0      0    155      0
+ wages      0      0      0      0      0     44     12      1      0      0     33
+
+confidence cutoff (within kind): share preselected, accuracy when preselected
+  0.4: 0.8789  0.6514
+  0.5: 0.7648  0.6618
+  0.6: 0.6477  0.6928
+  0.7: 0.5212  0.7379
+  0.8: 0.3935  0.7449
+  0.9: 0.2670  0.7897
+
+test templates: airtime_10, airtime_16, airtime_17, food_01, food_02, food_07, food_13, other_expense_10, other_income_02, other_income_03, other_income_07, other_income_12, other_income_15, other_income_16, rent_levy_02, rent_levy_05, rent_levy_11, rent_levy_14, sales_goods_07, sales_service_06, sales_service_07, sales_service_08, sales_service_10, sales_service_12, sales_service_17, sales_service_18, stock_01, stock_15, stock_16, transport_04, transport_07, transport_13, transport_15, transport_18, utilities_02, utilities_06, utilities_10, utilities_14, wages_08, wages_12
