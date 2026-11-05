@@ -20,7 +20,10 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase(super.executor);
 
   /// The app's database file, `sfm_lcp.sqlite` in the app documents folder.
-  factory AppDatabase.open() => AppDatabase(driftDatabase(name: 'sfm_lcp'));
+  /// The demo app passes its own [name], so even a demo build installed over
+  /// the study app could never write into the study database.
+  factory AppDatabase.open({String name = 'sfm_lcp'}) =>
+      AppDatabase(driftDatabase(name: name));
 
   /// 1: Chapter 3's schema. 2: adds the local `app_state` table.
   @override
