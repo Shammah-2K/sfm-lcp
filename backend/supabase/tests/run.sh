@@ -12,8 +12,10 @@ docker rm -f "$name" >/dev/null 2>&1 || true
 docker run -d --name "$name" -e POSTGRES_PASSWORD=test "$image" >/dev/null
 trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
 
+# Over TCP: the image's first-start setup server listens only on the socket and
+# then shuts down, so a socket check can pass too early.
 for _ in $(seq 1 30); do
-  docker exec "$name" pg_isready -U postgres -q && break
+  docker exec "$name" pg_isready -h 127.0.0.1 -U postgres -q && break
   sleep 1
 done
 
