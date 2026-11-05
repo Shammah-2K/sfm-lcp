@@ -1,0 +1,27 @@
+name: python
+
+# The ML pipeline's checks (ml/tests) and the benchmark runner's (bench/tests).
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: ml/requirements-pipeline.txt
+
+      - name: Install the pipeline's pinned packages
+        run: python -m pip install -r ml/requirements-pipeline.txt
+
+      - name: ML pipeline tests
+        run: python -m pytest ml/tests -q
+
+      - name: Benchmark runner tests
+        run: python -m pytest bench/tests -q
