@@ -1,0 +1,16 @@
+name: sql
+
+# The study server's migrations, seed and SQL checks in a throwaway PostgreSQL 15
+# container (backend/supabase/tests/run.sh). The runner has Docker.
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Migrations and SQL checks
+        run: bash backend/supabase/tests/run.sh

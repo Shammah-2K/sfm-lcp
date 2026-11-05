@@ -1,0 +1,265 @@
+# Templates and word lists for the synthetic categoriser corpus (make_corpus.py).
+#
+# DRAFT written with AI assistance (Claude Code, 2 Nov 2026). Shammah reviews and
+# edits every line from local knowledge, then sets `reviewed: true` below. Until
+# then every generated row and every model trained on it is marked as a draft.
+# Record the review in the AI assistance log.
+#
+# Rules (Chapter 3 Dataset Construction):
+#   * English descriptions with local nouns; no code-switched sentences.
+#   * Write what a trader would type into the description box: short, plain.
+#   * Each line under a category is one template. Training and testing are split
+#     BY TEMPLATE, so a held-out template is a phrasing the model never saw.
+#     Vary the wording between templates; near-duplicates make the test easy.
+#   * {slot} names must exist under `slots`. A template may use several slots.
+#   * Categories must be exactly the 11 codes of the app codebook.
+
+version: templates-v2
+reviewed: true
+
+slots:
+  item: [tomatoes, onions, kapenta, mealie meal, cooking oil, sugar, salt, bread, eggs,
+         chickens, rape, cabbage, soap, chitenge, salaula, charcoal, soft drinks, biscuits,
+         kalembula, groundnuts, bananas, sweet potatoes, dried fish, beans, rice, maize,
+         okra, impwa, chibwabwa, freezits, sweets, matches, candles, washing powder, vaseline,
+         lotion, airtime cards, shoes, school uniforms, plates, buckets]
+  place: [Soweto market, Comesa market, Kamwala, City market, Chilenje, Matero, Kalingalinga,
+          Mtendere, Chawama, Kanyama, Garden compound, Chelston, Kabwata, Northmead, town,
+          Mandevu, Chaisa, Kaunda Square]
+  supplier: [the wholesaler, Shoprite, Choppies, Pick n Pay, the farmer, the depot,
+             the Chinese shop, Kamwala traders, a bulk dealer, the bakery, the fish dealer]
+  worker: [shop assistant, helper, cleaner, guard, casual worker, the boy at the stall,
+           cashier, driver, loader, tailor apprentice]
+  month: [January, February, March, April, May, June, July, August, September, October,
+          November, December]
+  weekday: [Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday]
+  network: [MTN, Airtel, Zamtel]
+  unit: [bags, boxes, crates, kg, dozen, packets, tins, buckets, trays, bundles, pockets]
+  num: ["1", "2", "3", "4", "5", "6", "8", "10", "12", "15", "20", "24", "30", "50"]
+  amount: [K5, K10, K15, K20, K25, K30, K50, K75, K100, K150, K200, K250, K300, K500]
+  customer: [a customer, a regular customer, a neighbour, a teacher, the school,
+             a church member, a passer by, a trader next door, a nurse, a bus driver]
+  service_item: [phone, shoes, dress, trousers, radio, wristwatch, school bag, bicycle,
+                 suit, curtains]
+  hair: [braids, cornrows, a haircut, dreadlocks, a relaxer, a wash and set, a weave]
+
+categories:
+  sales_goods:
+    - "sold {num} {unit} of {item}"
+    - "{item} sold"
+    - "{item} sale"
+    - "sale of {item}"
+    - "{customer} bought {item}"
+    - "sales of {item} today"
+    - "{num} {unit} of {item} sold at {place}"
+    - "money from selling {item}"
+    - "cash sales {item}"
+    - "{item} money"
+    - "today's {item} takings"
+    - "{customer} paid for {item}"
+    - "selling {item} at the stall"
+    - "{item} on credit paid back"
+    - "morning sales"
+    - "evening sales at {place}"
+    - "{weekday} takings"
+    - "sold to {customer}"
+
+  sales_service:
+    - "hair braiding"
+    - "did {hair} for {customer}"
+    - "{hair} payment"
+    - "phone charging service"
+    - "charged phones"
+    - "tailoring job"
+    - "sewed {service_item} for {customer}"
+    - "repaired {service_item}"
+    - "{service_item} repair paid"
+    - "shoe repair"
+    - "printing and photocopy"
+    - "typing and printing for {customer}"
+    - "barber cut"
+    - "car wash"
+    - "carried goods for {customer}"
+    - "delivery job to {place}"
+    - "fixing {service_item} for {customer}"
+    - "service fee from {customer}"
+
+  other_income:
+    - "refund from supplier"
+    - "{supplier} refund"
+    - "commission received"
+    - "commission on airtime"
+    - "gift from family"
+    - "money from relatives"
+    - "interest from chilimba"
+    - "chilimba payout"
+    - "rent from tenant"
+    - "loan from {customer}"
+    - "loan repaid by {customer}"
+    - "debt paid back"
+    - "money from husband"
+    - "school fees refund"
+    - "sold old {service_item}"
+    - "mobile money cash back"
+    - "village banking share out"
+    - "allowance received"
+
+  stock:
+    - "bought {num} {unit} of {item}"
+    - "{item} for stock"
+    - "restock {item}"
+    - "{item} from {supplier}"
+    - "{item} from {place}"
+    - "order of {item}"
+    - "{num} {unit} of {item} wholesale"
+    - "stock from {supplier}"
+    - "new stock {item}"
+    - "buying {item} to sell"
+    - "{item} stock for {weekday}"
+    - "paid {supplier} for {item}"
+    - "{num} {unit} {item} for the stall"
+    - "orders {supplier}"
+    - "went to buy {item} at {place}"
+    - "{item} in bulk"
+    - "goods for the shop"
+    - "top up stock {item} and {item}"
+
+  transport:
+    - "bus fare to {place}"
+    - "minibus to {place}"
+    - "taxi from {place}"
+    - "transport for goods"
+    - "fuel for delivery"
+    - "carrier fee at {place}"
+    - "transport to {supplier}"
+    - "bus to town and back"
+    - "lift to {place}"
+    - "wheelbarrow boy to carry {item}"
+    - "hired a van for {item}"
+    - "bicycle taxi to {place}"
+    - "petrol"
+    - "diesel for the van"
+    - "fare home from {place}"
+    - "loading fee at {place}"
+    - "taxi with stock"
+    - "transport {weekday}"
+
+  airtime:
+    - "{network} airtime"
+    - "{network} talktime"
+    - "{network} bundle"
+    - "data bundle"
+    - "airtime for business phone"
+    - "internet bundle for {month}"
+    - "{amount} airtime"
+    - "talk time"
+    - "bought units for phone"
+    - "whatsapp bundle"
+    - "monthly bundle {network}"
+    - "phone credit"
+    - "data for orders"
+    - "airtime to call {supplier}"
+    - "{network} daily bundle"
+    - "top up phone"
+    - "bundles for {weekday}"
+    - "mobile data"
+
+  rent_levy:
+    - "stall rent"
+    - "shop rent for {month}"
+    - "market levy"
+    - "council levy"
+    - "daily market fee at {place}"
+    - "storage fee"
+    - "rent for the stall at {place}"
+    - "market fee"
+    - "levy at {place}"
+    - "trading licence"
+    - "council permit"
+    - "space rental"
+    - "rent {month}"
+    - "paid the landlord"
+    - "chairman fee at the market"
+    - "toilet and cleaning levy"
+    - "night storage for goods"
+    - "shelter fee {weekday}"
+
+  utilities:
+    - "ZESCO units"
+    - "electricity tokens"
+    - "water bill"
+    - "LWSC bill"
+    - "prepaid units for {month}"
+    - "solar battery charging"
+    - "power units"
+    - "ZESCO for the shop"
+    - "water for {month}"
+    - "paid for electricity"
+    - "units {amount}"
+    - "borehole water"
+    - "charging the battery"
+    - "light bill"
+    - "water tank refill"
+    - "electricity for the freezer"
+    - "tokens"
+    - "paraffin for the lamp"
+
+  wages:
+    - "paid {worker}"
+    - "{worker} wages"
+    - "salary for {worker}"
+    - "{worker} pay for {month}"
+    - "weekly pay {worker}"
+    - "wages"
+    - "paid the helpers"
+    - "piece work payment"
+    - "{worker} allowance"
+    - "casual labour"
+    - "daily pay for {worker}"
+    - "staff salaries"
+    - "paid workers {weekday}"
+    - "{worker} money for the week"
+    - "labour for offloading {item}"
+    - "pay for the person who sells for me"
+    - "advance to {worker}"
+    - "overtime {worker}"
+
+  food:
+    - "lunch"
+    - "breakfast at {place}"
+    - "tea and buns"
+    - "nshima and relish"
+    - "drinking water"
+    - "meal at the market"
+    - "food"
+    - "lunch at {place}"
+    - "chips and sausage"
+    - "fritters and tea"
+    - "food for the workers"
+    - "soft drink and bread"
+    - "supper"
+    - "snacks"
+    - "takeaway at {place}"
+    - "bought food for myself"
+    - "lunch {weekday}"
+    - "maheu"
+
+  other_expense:
+    - "phone repair"
+    - "mobile money fee"
+    - "plastic bags"
+    - "receipt book"
+    - "padlock for stall"
+    - "bank charges"
+    - "withdrawal charges"
+    - "packaging"
+    - "repairs at the stall"
+    - "new scale"
+    - "plastic sheet for the stall"
+    - "broom and cleaning things"
+    - "police fine"
+    - "funeral contribution"
+    - "church offering"
+    - "medicine"
+    - "school fees"
+    - "lost money"

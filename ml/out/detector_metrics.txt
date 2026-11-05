@@ -1,0 +1,29 @@
+model_version: iforest-v1
+data: synthetic ledgers with injected anomalies (make_amounts.py)
+split by trader: {'by': 'trader', 'test_traders': 20, 'train_traders': 60, 'train_entries': 26569, 'test_entries': 9056}
+threshold (chosen on training traders, best F1): 0.6868
+
+test: threshold 0.6868  precision 0.9183  recall 0.9455  F1 0.9317  normal entries flagged 0.0019  (202 anomalies in 9056 entries)
+    recall   /10: 0.9825 (n=57)
+    recall  /100: 1.0000 (n=24)
+    recall   x10: 0.8701 (n=77)
+    recall  x100: 1.0000 (n=44)
+test_at_0_5: threshold 0.5000  precision 0.2343  recall 1.0000  F1 0.3797  normal entries flagged 0.0745  (202 anomalies in 9056 entries)
+    recall   /10: 1.0000 (n=57)
+    recall  /100: 1.0000 (n=24)
+    recall   x10: 1.0000 (n=77)
+    recall  x100: 1.0000 (n=44)
+
+comparison on the held-out traders (same entries, history and split):
+  method              threshold  precision   recall       F1  normal flagged   recall x10  /10  x100 /100
+  isolation_forest       0.6868     0.9183   0.9455   0.9317          0.0019   0.870  0.982  1.000  1.000
+  ratio_5x_fixed         1.6094     0.9896   0.9455   0.9671          0.0002   0.870  0.982  1.000  1.000
+  ratio_tuned            1.4474     0.9561   0.9703   0.9631          0.0010   0.922  1.000  1.000  1.000
+  robust_z_tuned         3.9910     0.8488   0.8614   0.8550          0.0035   0.753  0.842  1.000  1.000
+  mean_3sd_fixed         3.0000     0.4648   0.4901   0.4771          0.0129   0.649  0.035  1.000  0.125
+  mean_sd_tuned          5.2404     0.7778   0.4505   0.5705          0.0029   0.610  0.000  0.977  0.042
+  ratio_5x_fixed: more than 5 times, or under a fifth of, the median; threshold fixed (= 5.00 times the median)
+  ratio_tuned: times the median, either way, cut-off tuned; threshold training traders, best F1 (= 4.25 times the median)
+  robust_z_tuned: |log ratio| / trader's usual spread, cut-off tuned; threshold training traders, best F1
+  mean_3sd_fixed: more than 3 SD from the mean (raw amounts); threshold fixed
+  mean_sd_tuned: SDs from the mean (raw amounts), cut-off tuned; threshold training traders, best F1

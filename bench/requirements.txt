@@ -1,0 +1,2 @@
+# bench/plot_bench.py only; run_bench.py needs the standard library alone.
+matplotlib==3.10.9

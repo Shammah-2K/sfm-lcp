@@ -1,0 +1,7 @@
+-- Local app and research-protocol settings: consent time, withdrawal,
+-- dismissed hints. Not part of Chapter 3's business schema: it has no outbox
+-- trigger and is never synced. Proposed as an addition to the data dictionary.
+CREATE TABLE app_state (
+  name  TEXT NOT NULL PRIMARY KEY,
+  value TEXT NOT NULL
+);
