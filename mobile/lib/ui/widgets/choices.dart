@@ -126,7 +126,9 @@ Future<String?> showCategorySheet(
           AppSpace.xl,
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          // Stretch, so the title and chips sit at the left edge of the
+          // full-width sheet rather than centred in it.
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text('Select category', style: AppText.title),
             const SizedBox(height: AppSpace.lg),
