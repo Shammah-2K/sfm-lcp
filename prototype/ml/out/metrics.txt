@@ -1,0 +1,26 @@
+model_version: proto-lr-1
+split: GroupShuffleSplit by template_id, test_size=0.2, random_state=42, draw 102
+train rows: 2346  test rows: 524
+macro-F1 (held-out templates): 0.4063
+
+per-class (held-out templates):
+               precision    recall  f1-score   support
+
+      airtime     1.0000    0.9474    0.9730        76
+         food     0.0000    0.0000    0.0000        32
+other_expense     0.0000    0.0000    0.0000        24
+ other_income     0.0000    0.0000    0.0000        36
+    rent_levy     0.0000    0.0000    0.0000        89
+  sales_goods     0.0000    0.0000    0.0000        59
+sales_service     0.5102    1.0000    0.6757        25
+        stock     0.2484    0.6032    0.3519        63
+    transport     0.3964    0.9778    0.5641        45
+    utilities     0.9000    1.0000    0.9474        27
+        wages     0.9783    0.9375    0.9574        48
+
+     accuracy                         0.4790       524
+    macro avg     0.3667    0.4969    0.4063       524
+ weighted avg     0.3693    0.4790    0.4006       524
+
+train templates (50): airtime_01, airtime_03, airtime_04, airtime_05, food_01, food_02, food_03, food_04, food_05, other_expense_02, other_expense_03, other_expense_04, other_expense_05, other_expense_06, other_income_01, other_income_02, other_income_04, other_income_05, rent_levy_01, rent_levy_02, rent_levy_03, rent_levy_04, sales_goods_01, sales_goods_02, sales_goods_04, sales_goods_05, sales_service_02, sales_service_03, sales_service_04, sales_service_05, sales_service_06, stock_01, stock_02, stock_03, stock_04, stock_06, transport_02, transport_03, transport_04, transport_05, transport_06, utilities_01, utilities_02, utilities_03, utilities_05, utilities_06, wages_02, wages_03, wages_04, wages_05
+test templates (13): airtime_02, airtime_06, food_06, other_expense_01, other_income_03, rent_levy_05, rent_levy_06, sales_goods_03, sales_service_01, stock_05, transport_01, utilities_04, wages_01
