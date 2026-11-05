@@ -27,10 +27,6 @@ jobs:
           channel: stable
           cache: true
 
-      # The tests load Roboto from the SDK's material_fonts artifact
-      # (test/flutter_test_config.dart), which a fresh runner has not downloaded.
-      - name: Download SDK fonts
-        run: flutter precache --universal
       - run: flutter pub get
       - name: Format
         run: dart format --output=none --set-exit-if-changed lib test tool

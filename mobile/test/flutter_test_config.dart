@@ -3,18 +3,16 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 
-/// Loads Roboto (shipped with the Flutter SDK) for every test, so the
-/// no-overflow checks measure real text rather than the test placeholder font.
+/// Loads Roboto for every test, so the no-overflow checks measure real text
+/// rather than the test placeholder font. The font files are committed in
+/// test/fonts/ (Apache License 2.0, see test/fonts/NOTICE.md) rather than read
+/// from the Flutter SDK's cache, which a fresh CI runner does not have.
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
-  final root = Platform.environment['FLUTTER_ROOT'];
-  if (root != null) {
-    final dir = '$root/bin/cache/artifacts/material_fonts';
-    Future<ByteData> file(String name) async =>
-        ByteData.sublistView(await File('$dir/$name').readAsBytes());
-    await (FontLoader('Roboto')
-          ..addFont(file('roboto-regular.ttf'))
-          ..addFont(file('roboto-bold.ttf')))
-        .load();
-  }
+  Future<ByteData> file(String name) async =>
+      ByteData.sublistView(await File('test/fonts/$name').readAsBytes());
+  await (FontLoader('Roboto')
+        ..addFont(file('roboto-regular.ttf'))
+        ..addFont(file('roboto-bold.ttf')))
+      .load();
   await testMain();
 }
