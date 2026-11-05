@@ -69,5 +69,154 @@
    }
   }
  },
+ "baselines": {
+  "ratio_5x_fixed": {
+   "threshold": 1.6094379124341003,
+   "precision": 0.9896373056994818,
+   "recall": 0.9455445544554455,
+   "f1": 0.9670886075949368,
+   "flagged_share_of_normal": 0.00022588660492432798,
+   "anomalies": 202,
+   "entries": 9056,
+   "recall_by_kind": {
+    "/10": {
+     "n": 57,
+     "recall": 0.9824561403508771
+    },
+    "/100": {
+     "n": 24,
+     "recall": 1.0
+    },
+    "x10": {
+     "n": 77,
+     "recall": 0.8701298701298701
+    },
+    "x100": {
+     "n": 44,
+     "recall": 1.0
+    }
+   },
+   "rule": "more than 5 times, or under a fifth of, the median",
+   "threshold_chosen_on": "fixed",
+   "threshold_as_times_median": 4.999999999999999
+  },
+  "ratio_tuned": {
+   "threshold": 1.4474,
+   "precision": 0.9560975609756097,
+   "recall": 0.9702970297029703,
+   "f1": 0.9631449631449631,
+   "flagged_share_of_normal": 0.0010164897221594759,
+   "anomalies": 202,
+   "entries": 9056,
+   "recall_by_kind": {
+    "/10": {
+     "n": 57,
+     "recall": 1.0
+    },
+    "/100": {
+     "n": 24,
+     "recall": 1.0
+    },
+    "x10": {
+     "n": 77,
+     "recall": 0.922077922077922
+    },
+    "x100": {
+     "n": 44,
+     "recall": 1.0
+    }
+   },
+   "rule": "times the median, either way, cut-off tuned",
+   "threshold_chosen_on": "training traders, best F1",
+   "threshold_as_times_median": 4.252044814276469
+  },
+  "robust_z_tuned": {
+   "threshold": 3.991,
+   "precision": 0.848780487804878,
+   "recall": 0.8613861386138614,
+   "f1": 0.855036855036855,
+   "flagged_share_of_normal": 0.003501242376327084,
+   "anomalies": 202,
+   "entries": 9056,
+   "recall_by_kind": {
+    "/10": {
+     "n": 57,
+     "recall": 0.8421052631578947
+    },
+    "/100": {
+     "n": 24,
+     "recall": 1.0
+    },
+    "x10": {
+     "n": 77,
+     "recall": 0.7532467532467533
+    },
+    "x100": {
+     "n": 44,
+     "recall": 1.0
+    }
+   },
+   "rule": "|log ratio| / trader's usual spread, cut-off tuned",
+   "threshold_chosen_on": "training traders, best F1"
+  },
+  "mean_3sd_fixed": {
+   "threshold": 3.0,
+   "precision": 0.4647887323943662,
+   "recall": 0.4900990099009901,
+   "f1": 0.4771084337349398,
+   "flagged_share_of_normal": 0.012875536480686695,
+   "anomalies": 202,
+   "entries": 9056,
+   "recall_by_kind": {
+    "/10": {
+     "n": 57,
+     "recall": 0.03508771929824561
+    },
+    "/100": {
+     "n": 24,
+     "recall": 0.125
+    },
+    "x10": {
+     "n": 77,
+     "recall": 0.6493506493506493
+    },
+    "x100": {
+     "n": 44,
+     "recall": 1.0
+    }
+   },
+   "rule": "more than 3 SD from the mean (raw amounts)",
+   "threshold_chosen_on": "fixed"
+  },
+  "mean_sd_tuned": {
+   "threshold": 5.2404,
+   "precision": 0.7777777777777778,
+   "recall": 0.4504950495049505,
+   "f1": 0.5705329153605015,
+   "flagged_share_of_normal": 0.0029365258640162636,
+   "anomalies": 202,
+   "entries": 9056,
+   "recall_by_kind": {
+    "/10": {
+     "n": 57,
+     "recall": 0.0
+    },
+    "/100": {
+     "n": 24,
+     "recall": 0.041666666666666664
+    },
+    "x10": {
+     "n": 77,
+     "recall": 0.6103896103896104
+    },
+    "x100": {
+     "n": 44,
+     "recall": 0.9772727272727273
+    }
+   },
+   "rule": "SDs from the mean (raw amounts), cut-off tuned",
+   "threshold_chosen_on": "training traders, best F1"
+  }
+ },
  "reference_vs_sklearn_max_abs_diff": 1.6653345369377348e-16
 }

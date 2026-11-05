@@ -25,7 +25,11 @@ file are assumptions to check** against what Lusaka traders spend and earn.
 `train_detector.py` computes each entry's features from that trader's *earlier* entries in the same
 category only (as the phone does), fits an Isolation Forest on 75% of traders (labels unused),
 chooses the flagging threshold on those traders, and reports precision, recall and recall per kind
-of slip on the other 25%. Run: `.venv/Scripts/python make_amounts.py` then
+of slip on the other 25%. It also scores five simple rules on the same held-out entries, history
+and split (times the median, fixed at 5× and tuned; robust z, tuned; mean ± SD on raw amounts,
+fixed at 3 and tuned), with tuned cut-offs chosen on the training traders as the forest's is, and
+prints them in a comparison table beside the forest. The rules are evaluated only, never exported.
+Run: `.venv/Scripts/python make_amounts.py` then
 `.venv/Scripts/python train_detector.py`, then in `mobile/`
 `flutter test test/domain/detector_parity_test.dart`.
 

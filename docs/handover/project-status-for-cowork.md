@@ -324,13 +324,29 @@ vs 0.3776). Nothing else was compared:
   baseline". The "> keyword baseline" half is met on synthetic data. The 0.80 half **cannot be
   measured** without real data, and even the synthetic score (0.50) is well below it.
 
-**Detector: no baseline at all.** Only one operating point was compared with another (the chosen
-threshold against 0.5). This is the most important gap, because the injected anomalies are
-**order-of-magnitude slips**: with the assumed day-to-day spread (σ = 0.4 on the log scale), a ×10
-slip sits about 2.3 log units, roughly 5–6 spreads, from usual. **A one-line rule** ("flag if the
-amount is more than 5 times, or less than one fifth of, the category median") might catch these as
-well as the forest does. That has not been measured, so the dissertation **cannot yet claim the
-Isolation Forest adds value over a simple rule.**
+**Detector: simple-rule baselines (added 5 Nov, after this document was first written).**
+The injected anomalies are **order-of-magnitude slips**: with the assumed day-to-day spread
+(σ = 0.4 on the log scale), a ×10 slip sits about 2.3 log units, roughly 5–6 spreads, from usual.
+`ml/train_detector.py` now scores five simple rules on the same held-out traders, entries, history
+and split as the forest, with tuned cut-offs chosen on the training traders. Output of the run on
+5 Nov (`ml/out/detector_metrics.txt`):
+
+| Method (held-out traders) | Precision | Recall | F1 | Normal flagged |
+|---|---|---|---|---|
+| Isolation Forest (threshold 0.6868) | 0.9183 | 0.9455 | 0.9317 | 0.0019 |
+| Ratio rule, fixed: > 5× or < ⅕ of the median | 0.9896 | 0.9455 | **0.9671** | 0.0002 |
+| Ratio rule, tuned (4.25×) | 0.9561 | 0.9703 | 0.9631 | 0.0010 |
+| Robust z, tuned (3.99) | 0.8488 | 0.8614 | 0.8550 | 0.0035 |
+| Mean ± 3 SD on raw amounts, fixed | 0.4648 | 0.4901 | 0.4771 | 0.0129 |
+| Mean ± SD on raw amounts, tuned (5.24) | 0.7778 | 0.4505 | 0.5705 | 0.0029 |
+
+**On this synthetic data, the one-line ratio rule matches or beats the Isolation Forest**
+(same recall, higher precision). The forest therefore shows **no added value over a simple
+rule here**, which is expected since the slips are order-of-magnitude by construction. This
+is a valid finding to report honestly; how to interpret it (keep the forest for the
+less obvious anomalies real data might contain, or ship the rule) is Shammah's call. Classic
+mean ± SD on raw amounts does badly: it almost never catches ÷10 or ÷100 slips, because a small
+amount is few raw SDs from the mean. That supports the log-scale features.
 
 **Performance: no comparison with another model either.** The benchmark measures the chosen
 models against Chapter 3's absolute thresholds (p95 ≤ 100 ms, model ≤ 5 MB, RAM increase ≤ 50 MB,
@@ -340,7 +356,7 @@ load ≤ 1 s), and so far only on a high-end phone.
 
 Low effort and high value, all on the existing splits, so no new data is needed:
 
-1. **Detector baselines (most important).** In `ml/train_detector.py`, evaluate on the same
+1. **Detector baselines (most important). Done 5 Nov; results in section 6.3.** In `ml/train_detector.py`, evaluate on the same
    held-out traders: (a) the ratio rule above with the ratio chosen on training traders, and (b) a
    robust z-score rule (|z| above a threshold chosen on training traders). Report precision,
    recall and F1 next to the forest. If a rule matches the forest, say so: it is a valid finding
@@ -368,7 +384,7 @@ Every result must come from running the scripts; Shammah runs them and reports t
 |---|---|---|
 | L1 | **All training and evaluation data are synthetic** (templates and amount assumptions drafted with AI assistance and accepted unchanged) | Accuracy describes generalisation to unseen *templates*, not to real trader descriptions; Chapter 3's real-data F1 criterion is not measurable |
 | L2 | Categoriser macro-F1 0.50 (0.58 within kind) on held-out templates, below 0.80 | The suggestion is often wrong on unseen phrasings; preselection at 0.7 applies to about half of entries, at about 74% accuracy (synthetic) |
-| L3 | **No detector baseline; injected anomalies are easy by construction** | Isolation Forest's added value is unproven (section 6.3) |
+| L3 | **Injected anomalies are easy by construction; a 5× ratio rule matches the forest on them** | Isolation Forest's added value is not shown on synthetic data (section 6.3) |
 | L4 | Detector threshold chosen with labels | Not purely unsupervised; say "threshold calibrated on labelled synthetic data" |
 | L5 | **Performance measured only on a high-end phone** | NFR1, NFR2, NFR7 not yet evidenced on 2–4 GB devices |
 | L6 | App PSS is whole-app memory; RSS change is noisy | NFR2's "RAM increase" is measured indirectly |
@@ -388,7 +404,8 @@ Every result must come from running the scripts; Shammah runs them and reports t
 ## 8. Future work
 
 **Before 10 November (in priority order):**
-1. Detector baselines and categoriser alternatives (section 6.4, items 1–2).
+1. Categoriser alternatives (section 6.4, item 2). Detector baselines are done (section 6.3);
+   decide how to present their result.
 2. Benchmark on the 2–4 GB phones (`ml/.venv/Scripts/python bench/run_bench.py`, then
    `plot_bench.py`), and measure APK size
    (`flutter build apk --release --analyze-size --target-platform android-arm64`).

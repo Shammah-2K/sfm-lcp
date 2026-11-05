@@ -15,6 +15,9 @@ Method:
     (best F1); precision and recall are reported on the held-out traders only.
   * The score stored on the phone is s = 2^(-E[h(x)] / c(max_samples)), between 0
     and 1, higher = more unusual (scikit-learn's -score_samples).
+  * Baselines (simple rules: times the median, robust z, mean +/- SD) are scored on
+    the same held-out traders with the same history, and reported beside the forest.
+    They are evaluated only, never exported.
 
     python train_detector.py
 """
@@ -112,13 +115,22 @@ def score(trees, max_samples, x) -> float:
 # --------------------------------------------------------------- evaluation
 
 def best_threshold(scores, labels):
-    best = (0.0, 0.5)
-    for th in np.unique(np.round(scores, 4)):
-        p, r, f, _ = precision_recall_fscore_support(labels, scores >= th, average="binary",
-                                                     zero_division=0)
-        if f > best[0]:
-            best = (f, float(th))
-    return best[1]
+    """The candidate (scores rounded to 4 places) with the best F1 when flagging
+    score >= candidate; the smallest such candidate on a tie. Vectorised, so it
+    is quick on the baselines' unbounded scores too."""
+    scores, labels = np.asarray(scores, dtype=float), np.asarray(labels, dtype=int)
+    candidates = np.unique(np.round(scores, 4))
+    order = np.argsort(scores, kind="stable")
+    sorted_scores = scores[order]
+    # anomalies_from[i] = anomalies among the i-th smallest score and above.
+    anomalies_from = np.concatenate([np.cumsum(labels[order][::-1])[::-1], [0]])
+    start = np.searchsorted(sorted_scores, candidates, side="left")
+    flagged = len(scores) - start
+    tp = anomalies_from[start]
+    f1 = np.where(flagged > 0, 2 * tp / (flagged + labels.sum()), 0.0)
+    if not len(candidates) or f1.max() <= 0:
+        return 0.5
+    return float(candidates[int(np.argmax(f1))])
 
 
 def summarise(scores, labels, kinds, threshold):
@@ -134,6 +146,79 @@ def summarise(scores, labels, kinds, threshold):
             "flagged_share_of_normal": float(np.mean(flagged[normal])),
             "anomalies": int(sum(labels)), "entries": len(labels),
             "recall_by_kind": per_kind}
+
+
+# ---------------------------------------------------------------- baselines
+#
+# Simple rules the forest must beat to earn its place. Each sees exactly what
+# the forest sees: the same entries, the same earlier history (same trader,
+# type and category, last HISTORY_DAYS days, at least MIN_HISTORY entries) and
+# the same split. A score is higher = more unusual; an entry is flagged when
+# score >= threshold. "tuned" thresholds are chosen on the training traders
+# (best F1), as the forest's is; "fixed" ones are a conventional value, no tuning.
+
+def ratio_score(d) -> float:
+    """How many times bigger or smaller than the median, on a log scale, either way."""
+    return abs(d["x"][0])
+
+
+def robust_z_score(d) -> float:
+    """The same in units of this trader's usual spread (the forest's second feature)."""
+    return abs(d["x"][1])
+
+
+def mean_sd_score(d) -> float:
+    """Classic z-score on raw amounts: distance from the mean in standard deviations.
+    A constant history has no spread; a floor of 1 ngwee keeps it defined."""
+    h = np.asarray(d["history"], dtype=float)
+    return abs(d["amount"] - h.mean()) / max(float(h.std()), 1.0)
+
+
+# (name, description, score, fixed threshold or None for tuned)
+BASELINES = [
+    ("ratio_5x_fixed", "more than 5 times, or under a fifth of, the median", ratio_score,
+     math.log(5.0)),
+    ("ratio_tuned", "times the median, either way, cut-off tuned", ratio_score, None),
+    ("robust_z_tuned", "|log ratio| / trader's usual spread, cut-off tuned", robust_z_score, None),
+    ("mean_3sd_fixed", "more than 3 SD from the mean (raw amounts)", mean_sd_score, 3.0),
+    ("mean_sd_tuned", "SDs from the mean (raw amounts), cut-off tuned", mean_sd_score, None),
+]
+
+
+def evaluate_baselines(train, test):
+    y_train = [d["label"] for d in train]
+    y_test, kinds = [d["label"] for d in test], [d["kind"] for d in test]
+    out = {}
+    for name, description, fn, fixed in BASELINES:
+        s_test = np.array([fn(d) for d in test])
+        threshold = (fixed if fixed is not None
+                     else best_threshold(np.array([fn(d) for d in train]), y_train))
+        m = summarise(s_test, y_test, kinds, float(threshold))
+        m["rule"] = description
+        m["threshold_chosen_on"] = "fixed" if fixed is not None else "training traders, best F1"
+        if name.startswith("ratio"):
+            m["threshold_as_times_median"] = math.exp(threshold)
+        out[name] = m
+    return out
+
+
+def comparison_lines(metrics):
+    rows = [("isolation_forest", metrics["test"])] + list(metrics["baselines"].items())
+    lines = ["comparison on the held-out traders (same entries, history and split):",
+             f"  {'method':<18}{'threshold':>11}{'precision':>11}{'recall':>9}{'F1':>9}"
+             f"{'normal flagged':>16}   recall x10  /10  x100 /100"]
+    for name, m in rows:
+        r = m["recall_by_kind"]
+        per_kind = "  ".join(f"{r[k]['recall']:.3f}" if k in r else "  -  "
+                             for k in ("x10", "/10", "x100", "/100"))
+        lines.append(f"  {name:<18}{m['threshold']:>11.4f}{m['precision']:>11.4f}"
+                     f"{m['recall']:>9.4f}{m['f1']:>9.4f}{m['flagged_share_of_normal']:>16.4f}"
+                     f"   {per_kind}")
+    for name, m in metrics["baselines"].items():
+        extra = (f" (= {m['threshold_as_times_median']:.2f} times the median)"
+                 if "threshold_as_times_median" in m else "")
+        lines.append(f"  {name}: {m['rule']}; threshold {m['threshold_chosen_on']}{extra}")
+    return lines
 
 
 def main():
@@ -173,6 +258,7 @@ def main():
         "threshold_chosen_on": "training traders, best F1",
         "test": summarise(s_test, [d["label"] for d in test], [d["kind"] for d in test], threshold),
         "test_at_0_5": summarise(s_test, [d["label"] for d in test], [d["kind"] for d in test], 0.5),
+        "baselines": evaluate_baselines(train, test),
         "reference_vs_sklearn_max_abs_diff": worst,
     }
     OUT.mkdir(exist_ok=True)
@@ -188,6 +274,7 @@ def main():
                      f"({m['anomalies']} anomalies in {m['entries']} entries)")
         for k, v in m["recall_by_kind"].items():
             lines.append(f"    recall {k:>5}: {v['recall']:.4f} (n={v['n']})")
+    lines += [""] + comparison_lines(metrics)
     text = "\n".join(lines) + "\n"
     (OUT / "detector_metrics.txt").write_text(text, encoding="utf-8", newline="\n")
     print(text)
