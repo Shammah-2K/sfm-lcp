@@ -129,6 +129,9 @@ ThemeData buildAppTheme() {
       backgroundColor: AppColors.surface,
       modalBarrierColor: AppColors.scrim,
       showDragHandle: true,
+      // Full width always: a modal sheet may otherwise shrink to its content
+      // (e.g. the three sale category chips) and float in the middle.
+      constraints: BoxConstraints(minWidth: double.infinity),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadius.sheet),
