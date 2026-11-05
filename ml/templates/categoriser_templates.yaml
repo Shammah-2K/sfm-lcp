@@ -5,7 +5,7 @@
 # then every generated row and every model trained on it is marked as a draft.
 # Record the review in the AI assistance log.
 #
-# Rules (BUILD_PROTOTYPE.md section 4, Chapter 3 Dataset Construction):
+# Rules (Chapter 3 Dataset Construction):
 #   * English descriptions with local nouns; no code-switched sentences.
 #   * Write what a trader would type into the description box: short, plain.
 #   * Each line under a category is one template. Training and testing are split

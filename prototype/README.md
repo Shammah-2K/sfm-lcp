@@ -23,7 +23,6 @@ app/  Flutter app (package sfm_lcp_prototype)
       lib/data/schema.drift       Drift schema built from schema.sql
       lib/data/ledger_repository.dart, session.dart
       lib/theme.dart              every colour, size and text style
-DECISIONS.md                      choices made where BUILD_PROTOTYPE.md was silent
 ```
 
 ## Regenerate the corpus and model

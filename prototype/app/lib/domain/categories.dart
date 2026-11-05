@@ -1,4 +1,4 @@
-/// The fixed category codebook (BUILD_PROTOTYPE.md section 3).
+/// The fixed category codebook (Chapter 3).
 ///
 /// Seeded into the `category` table on first run and used by the categoriser to restrict a
 /// suggestion to the categories of the entry's kind.

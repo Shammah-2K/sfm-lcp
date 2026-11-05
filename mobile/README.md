@@ -4,15 +4,20 @@ The Android app for market traders: record sales and expenses, see today's total
 all offline, and sync a copy to the study server when there is network. The UI is built from
 [`docs/design/ui-design-brief.md`](../docs/design/ui-design-brief.md) and talks to the rest of
 the app only through the interfaces in `lib/app/ports.dart`. The categoriser and anomaly
-detector are stand-ins until the ML phase.
+detector are the models trained in `../ml/`, bundled in `assets/models/` and run in pure Dart.
 
 ## Run it
 
 ```bash
 cd mobile
-flutter run --dart-define-from-file=supabase.json   # with sync (see ../backend/README.md)
-flutter run                                         # offline only
+flutter pub get
+dart run build_runner build                                   # Drift code, once and after schema changes
+flutter run --release --dart-define-from-file=supabase.json   # with sync (see ../backend/README.md)
+flutter run                                                   # offline only
 ```
+
+Other entry points: `lib/demo/demo_main.dart` (the demo app with sample records, see the root
+README) and `lib/bench/bench_main.dart` (the on-device benchmark, see `../bench/README.md`).
 
 `lib/preview/preview_ports.dart` holds fixed sample data, used only by the UI tests and the
 screen renders.
@@ -21,7 +26,11 @@ screen renders.
 
 ```
 lib/
-  main.dart                 wires the app to its ports (preview for now)
+  main.dart                 opens the database, loads the models, wires the ports (app_ports.dart)
+  data/                     Drift database (schema.sql), ledger, totals, stock, session repositories
+  domain/                   the categoriser and detector (pure Dart), model loading
+  sync/                     sync worker, foreground scheduler, Supabase client
+  demo/, bench/             the demo app and benchmark entry points
   app/
     ports.dart              ← the contract: what the UI needs from the data and domain layers
     view_data.dart          shapes the screens display and the drafts they hand back
@@ -60,9 +69,10 @@ tool/screens/               renders every screen to docs/screens/
 
 Rendered images of every screen are in [`docs/screens/`](../docs/screens/).
 
-## The next phase: implementing the ports
+## The ports
 
-Each interface in `lib/app/ports.dart` maps to a part of Chapter 3:
+Each interface in `lib/app/ports.dart` maps to a part of Chapter 3, and is implemented in
+`lib/data/`, `lib/domain/` and `lib/sync/` (assembled in `lib/app/app_ports.dart`):
 
 | Port | What it does | Chapter 3 |
 |---|---|---|
@@ -73,11 +83,9 @@ Each interface in `lib/app/ports.dart` maps to a part of Chapter 3:
 | `StockPort` | Products, low-stock flags (`v_low_stock`), adjustments | FR6, FR7 |
 | `SyncPort` | Records waiting in the outbox, last sync time | FR9 |
 
-Implement them in `lib/data/` and `lib/domain/`, build an `AppPorts` from them in `main.dart`,
-and every screen switches over with no UI change. The UI never computes a ledger rule: totals,
-"usually about" amounts, low-stock flags and suggestions all arrive ready-made through the
-ports. The only arithmetic in the UI is display arithmetic (the quick-sale basket total and the
-"new stock" preview), which you may prefer to move behind `LedgerPort` / `StockPort`.
+The UI never computes a ledger rule: totals, "usually about" amounts, low-stock flags and
+suggestions all arrive ready-made through the ports. The only arithmetic in the UI is display
+arithmetic (the quick-sale basket total and the "new stock" preview).
 
 ## Checks
 

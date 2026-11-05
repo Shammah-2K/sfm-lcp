@@ -142,3 +142,12 @@ mobile/supabase.json
 
 # Dashboard config: project URL and publishable key (copy config.example.js)
 dashboard/config.js
+
+# ---------- Working notes for AI assistants (kept locally, not published) ----------
+CLAUDE.md
+BUILD_PROTOTYPE.md
+docs/claude_code_handoff.md
+docs/handover/
+docs/plans/
+prototype/DECISIONS.md
+.claude/

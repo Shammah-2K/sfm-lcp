@@ -41,7 +41,8 @@ Run: `.venv/Scripts/python make_amounts.py` then
    Then set `reviewed: true`. Until then every row is marked `templates-v2-draft` and the model
    `lr-v2-draft`.
 2. **Generate:** `.venv/Scripts/python make_corpus.py`
-3. **Train and evaluate:** `.venv/Scripts/python train_categoriser.py --cutoff 0.6`
+3. **Train and evaluate:** `.venv/Scripts/python train_categoriser.py --cutoff 0.7` (0.7 is the
+   cutoff the shipped model uses)
    It prints and writes `out/categoriser_metrics.txt`: macro-F1 of the keyword baseline and of
    TF-IDF + logistic regression on held-out templates (all classes, and within sale/expense, which
    is what the app does), the confusion matrix, and how many suggestions would be preselected, and
