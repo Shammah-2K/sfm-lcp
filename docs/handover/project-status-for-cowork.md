@@ -311,15 +311,32 @@ sales_goods 0.3468 (precision 0.2098: a "sink" class many items fall into), wage
 
 ### 6.3 What the models were compared against: the honest answer
 
-**Categoriser: only a keyword baseline.** It is learned from the training templates (words seen in
-only one category vote for it), so it is a fair floor, and logistic regression beats it (0.5028
-vs 0.3776). Nothing else was compared:
+**Categoriser: keyword baseline and five alternatives (alternatives added 5 Nov).** The keyword
+baseline is learned from the training templates (words seen in only one category vote for it),
+so it is a fair floor. `ml/train_categoriser.py` now also tunes each alternative by grouped
+5-fold cross-validation **on the training templates only**, then scores it once on the same
+held-out templates. Output of the run on 5 Nov (`ml/out/categoriser_metrics.txt`):
 
-- **Not compared:** Naive Bayes and linear SVM (Chapter 3 replaced them with logistic regression
-  because its probabilities drive the confirm/correct interface, but did not measure them),
-  word-level TF-IDF, other n-gram ranges or regularisation values, **fastText** and the **small
-  language model** arm (both listed in Chapter 3's models table), and any comparison with a
-  published model or dataset.
+| Model | CV macro-F1 (train templates) | Test macro-F1 | Within kind | Preselected at 0.7 | Accuracy then |
+|---|---|---|---|---|---|
+| Keyword baseline | – | 0.3776 | – | – | – |
+| **Char TF-IDF + LR, C=4 (shipped, lr-v2)** | 0.5613 | 0.5028 | 0.5828 | 0.5212 | 0.7379 |
+| Char TF-IDF + LR, tuned (2–5 grams, C=4) | 0.5720 | 0.4940 | 0.5850 | 0.5363 | 0.7279 |
+| Word TF-IDF + LR (C=16) | 0.5368 | 0.4329 | 0.4841 | 0.6627 | 0.6611 |
+| Char TF-IDF + linear SVM (C=1) | 0.5714 | 0.5303 | 0.5977 | – (no probabilities) | – |
+| Char TF-IDF + Complement NB (α=1) | 0.5531 | 0.5349 | 0.6044 | 0.3382 | 0.8366 |
+| Word counts + Multinomial NB (α=0.03) | 0.5116 | 0.4097 | 0.4646 | 0.7436 | 0.6861 |
+
+**Reading it:** every character-level model lands between 0.49 and 0.54 on the held-out
+templates, and the order on the test set differs from the order in cross-validation. The test
+set is only 40 templates, so differences of a few points are within noise. **No alternative is
+clearly better than the shipped model**; word-level models are clearly worse (they cannot
+handle unseen spellings and typos). The ceiling is the synthetic data's template variety, not the
+choice of classifier. The SVM gives no probabilities, which the confirm/correct interface needs,
+so it would need calibration to be used. How to present this is Shammah's call.
+
+- **Still not compared:** **fastText** and the **small language model** arm (both listed in
+  Chapter 3's models table), and any comparison with a published model or dataset.
 - **Against Chapter 3's own criterion:** "Macro-F1 (real held-out set) ≥ 0.80 and > keyword
   baseline". The "> keyword baseline" half is met on synthetic data. The 0.80 half **cannot be
   measured** without real data, and even the synthetic score (0.50) is well below it.
@@ -361,7 +378,7 @@ Low effort and high value, all on the existing splits, so no new data is needed:
    robust z-score rule (|z| above a threshold chosen on training traders). Report precision,
    recall and F1 next to the forest. If a rule matches the forest, say so: it is a valid finding
    (the simpler model suffices) and the app could ship either.
-2. **Categoriser alternatives.** In `ml/train_categoriser.py`, on the same template split:
+2. **Categoriser alternatives. Done 5 Nov; results in section 6.3.** In `ml/train_categoriser.py`, on the same template split:
    Multinomial/Complement Naive Bayes, linear SVM (with probability calibration if it is to drive
    preselection), word-level TF-IDF + LR, and two or three values of C and n-gram range, chosen
    by cross-validation on the training templates only, never on the test templates. Report a
@@ -404,8 +421,8 @@ Every result must come from running the scripts; Shammah runs them and reports t
 ## 8. Future work
 
 **Before 10 November (in priority order):**
-1. Categoriser alternatives (section 6.4, item 2). Detector baselines are done (section 6.3);
-   decide how to present their result.
+1. Detector baselines and categoriser alternatives are done (section 6.3); decide how to
+   present their results.
 2. Benchmark on the 2–4 GB phones (`ml/.venv/Scripts/python bench/run_bench.py`, then
    `plot_bench.py`), and measure APK size
    (`flutter build apk --release --analyze-size --target-platform android-arm64`).

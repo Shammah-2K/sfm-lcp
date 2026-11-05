@@ -45,7 +45,11 @@ Run: `.venv/Scripts/python make_amounts.py` then
    It prints and writes `out/categoriser_metrics.txt`: macro-F1 of the keyword baseline and of
    TF-IDF + logistic regression on held-out templates (all classes, and within sale/expense, which
    is what the app does), the confusion matrix, and how many suggestions would be preselected, and
-   how accurately, at each confidence cutoff. Choose `--cutoff` from that table.
+   how accurately, at each confidence cutoff. Choose `--cutoff` from that table. It then compares
+   alternatives on the same held-out templates: word TF-IDF + LR, linear SVM, Complement and
+   Multinomial Naive Bayes, and the shipped LR with other n-grams and C, each tuned by grouped
+   cross-validation on the training templates only (about a minute; `--skip-alternatives` skips
+   it). The alternatives are evaluated only; the exported model is always lr-v2.
 4. **Check the app still matches:** in `mobile/`, `flutter test test/domain/categoriser_parity_test.dart`
    (Dart must equal scikit-learn within 1e-6 on 300 cases).
 5. Record the run in the AI assistance log and commit `out/`, the YAML, the corpus and the model.

@@ -15,11 +15,15 @@ model never saw; a row-level split would score memorisation):
   * macro-F1 over all 11 classes (Chapter 3's metric) and within the entry's kind
     (sale or expense), which is what the app does: the user has already chosen
     Sale or Expense when the suggestion is shown;
-  * confusion matrix; coverage and accuracy at candidate confidence cutoffs.
+  * confusion matrix; coverage and accuracy at candidate confidence cutoffs;
+  * alternatives (word TF-IDF + LR, linear SVM, Complement and Multinomial Naive
+    Bayes, and the shipped LR family with other settings), each tuned by grouped
+    cross-validation on the TRAINING templates only, then scored once on the same
+    held-out templates. They are evaluated only; the exported model is lr-v2.
 The data are synthetic (make_corpus.py): report these as template-generalisation
 results, not as accuracy on real trader descriptions.
 
-    python train_categoriser.py [--cutoff 0.6]
+    python train_categoriser.py [--cutoff 0.6] [--skip-alternatives]
 """
 
 from __future__ import annotations
@@ -34,11 +38,13 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
-from sklearn.model_selection import GroupShuffleSplit
+from sklearn.model_selection import GridSearchCV, GroupKFold, GroupShuffleSplit
+from sklearn.naive_bayes import ComplementNB, MultinomialNB
 from sklearn.pipeline import Pipeline
+from sklearn.svm import LinearSVC
 
 from make_corpus import codebook, typo
 
@@ -54,6 +60,7 @@ TEST_SIZE = 0.2
 PARITY_FROM_CORPUS = 200
 PARITY_UNSEEN_TYPOS = 80
 CUTOFFS = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+CV_FOLDS = 5
 
 EDGE_CASES = [
     "lunch", "ZESCO", "PAID THE GUARD", "bus fare!!!", "K50 airtime?", "12345",
@@ -150,9 +157,111 @@ def restrict_to_kind(proba, classes, kinds_of_rows, kinds):
     return p / p.sum(axis=1, keepdims=True)
 
 
+# ------------------------------------------------------------- alternatives
+#
+# Other models a reviewer would expect to see, on the same split. Each is tuned
+# by GroupKFold cross-validation (groups = templates, macro-F1) on the training
+# templates only, so the held-out templates are touched once, for the final
+# score. "lr_char_shipped" is the exported configuration, cross-validated the
+# same way so its CV score is comparable.
+
+def _char_tfidf():
+    return TfidfVectorizer(analyzer="char_wb", ngram_range=(NGRAM_MIN, NGRAM_MAX), lowercase=True,
+                           sublinear_tf=True, min_df=2, max_features=6000)
+
+
+def _word_tfidf():
+    return TfidfVectorizer(analyzer="word", lowercase=True, sublinear_tf=True, min_df=2)
+
+
+# (name, description, pipeline factory, grid)
+ALTERNATIVES = [
+    ("lr_char_shipped", "TF-IDF char_wb 2-4 + logistic regression, C=4 (exported as lr-v2)",
+     make_pipeline, {}),
+    ("lr_char_tuned", "TF-IDF char_wb + logistic regression, n-grams and C tuned",
+     lambda: Pipeline([("tfidf", _char_tfidf()), ("clf", LogisticRegression(max_iter=2000))]),
+     {"tfidf__ngram_range": [(2, 4), (1, 3), (2, 5)], "clf__C": [1.0, 4.0, 16.0]}),
+    ("lr_word", "TF-IDF words + logistic regression",
+     lambda: Pipeline([("tfidf", _word_tfidf()), ("clf", LogisticRegression(max_iter=2000))]),
+     {"tfidf__ngram_range": [(1, 1), (1, 2)], "clf__C": [1.0, 4.0, 16.0]}),
+    ("svm_char", "TF-IDF char_wb 2-4 + linear SVM (no probabilities)",
+     lambda: Pipeline([("tfidf", _char_tfidf()), ("clf", LinearSVC())]),
+     {"clf__C": [0.1, 0.3, 1.0, 3.0]}),
+    ("cnb_char", "TF-IDF char_wb 2-4 + Complement Naive Bayes",
+     lambda: Pipeline([("tfidf", _char_tfidf()), ("clf", ComplementNB())]),
+     {"clf__alpha": [0.03, 0.1, 0.3, 1.0]}),
+    ("mnb_word", "word counts + Multinomial Naive Bayes",
+     lambda: Pipeline([("counts", CountVectorizer(min_df=2)), ("clf", MultinomialNB())]),
+     {"counts__ngram_range": [(1, 1), (1, 2)], "clf__alpha": [0.03, 0.1, 0.3, 1.0]}),
+]
+
+
+def class_scores(model, x):
+    """Probabilities where the model has them, otherwise decision scores."""
+    if hasattr(model, "predict_proba"):
+        return model.predict_proba(x), True
+    return model.decision_function(x), False
+
+
+def evaluate_alternatives(tr_x, tr_y, tr_groups, te_x, te_y, kinds, cutoff):
+    out = {}
+    row_kinds = [kinds[y] for y in te_y]
+    for name, description, factory, grid in ALTERNATIVES:
+        search = GridSearchCV(factory(), grid, scoring="f1_macro", cv=GroupKFold(CV_FOLDS),
+                              n_jobs=-1, refit=True)
+        search.fit(tr_x, tr_y, groups=tr_groups)
+        model = search.best_estimator_
+        classes = list(model.classes_)
+        scores, is_proba = class_scores(model, te_x)
+        pred = [classes[i] for i in scores.argmax(axis=1)]
+        mask = np.array([[kinds[c] == k for c in classes] for k in row_kinds])
+        pred_within = [classes[i] for i in np.where(mask, scores, -np.inf).argmax(axis=1)]
+        m = {
+            "model": description,
+            "chosen": {k: (list(v) if isinstance(v, tuple) else v)
+                       for k, v in search.best_params_.items()},
+            "cv_macro_f1_train_templates": float(search.best_score_),
+            "test_macro_f1_all_classes": f1_score(te_y, pred, average="macro"),
+            "test_macro_f1_within_kind": f1_score(te_y, pred_within, average="macro"),
+            "cutoff": cutoff, "preselected_share": None, "accuracy_when_preselected": None,
+        }
+        if is_proba:
+            confidence = restrict_to_kind(scores, classes, row_kinds, kinds).max(axis=1)
+            chosen = confidence >= cutoff
+            n = int(chosen.sum())
+            m["preselected_share"] = n / len(te_y)
+            m["accuracy_when_preselected"] = (
+                sum(1 for i in np.flatnonzero(chosen) if pred_within[i] == te_y[i]) / n
+                if n else None)
+        out[name] = m
+        print(f"  {name}: CV {m['cv_macro_f1_train_templates']:.4f}  "
+              f"test {m['test_macro_f1_all_classes']:.4f}", flush=True)
+    return out
+
+
+def alternatives_text(alts, keyword_f1) -> list[str]:
+    cutoff = next(iter(alts.values()))["cutoff"]
+    lines = ["alternatives, same held-out templates (tuned by grouped CV on training templates only):",
+             f"  {'method':<17}{'CV F1':>8}{'test F1':>9}{'in kind':>9}"
+             f"{'preselected':>13}{'accuracy':>10}   (preselection at cutoff {cutoff})",
+             f"  {'keyword_baseline':<17}{'-':>8}{keyword_f1:>9.4f}{'-':>9}{'-':>13}{'-':>10}"]
+    for name, m in alts.items():
+        share = "-" if m["preselected_share"] is None else f"{m['preselected_share']:.4f}"
+        acc = ("-" if m["accuracy_when_preselected"] is None
+               else f"{m['accuracy_when_preselected']:.4f}")
+        lines.append(f"  {name:<17}{m['cv_macro_f1_train_templates']:>8.4f}"
+                     f"{m['test_macro_f1_all_classes']:>9.4f}{m['test_macro_f1_within_kind']:>9.4f}"
+                     f"{share:>13}{acc:>10}")
+    for name, m in alts.items():
+        chosen = ", ".join(f"{k.split('__')[-1]}={v}" for k, v in m["chosen"].items()) or "fixed"
+        lines.append(f"  {name}: {m['model']}; {chosen}")
+    lines.append("  not evaluated: fastText, the small-language-model arm (see the dissertation)")
+    return lines
+
+
 # --------------------------------------------------------------- evaluation
 
-def evaluate(texts, labels, groups, kinds, model_version):
+def evaluate(texts, labels, groups, kinds, model_version, cutoff=0.6, alternatives=True):
     attempt, train, test = split_by_template(texts, labels, groups)
     tr_x, tr_y = [texts[i] for i in train], [labels[i] for i in train]
     te_x, te_y = [texts[i] for i in test], [labels[i] for i in test]
@@ -193,6 +302,10 @@ def evaluate(texts, labels, groups, kinds, model_version):
         "classes": classes,
         "confusion_matrix_all_classes": confusion_matrix(te_y, pred, labels=classes).tolist(),
     }
+    if alternatives:
+        print("alternatives (grouped CV on the training templates, then the held-out ones):")
+        metrics["alternatives"] = evaluate_alternatives(
+            tr_x, tr_y, [groups[i] for i in train], te_x, te_y, kinds, cutoff)
     report = classification_report(te_y, pred, digits=4, zero_division=0)
     return metrics, report
 
@@ -222,6 +335,8 @@ def metrics_text(m, report) -> str:
     for c in m["confidence_cutoffs_within_kind"]:
         acc = "-" if c["accuracy_when_preselected"] is None else f"{c['accuracy_when_preselected']:.4f}"
         lines.append(f"  {c['cutoff']:.1f}: {c['preselected_share']:.4f}  {acc}")
+    if "alternatives" in m:
+        lines += [""] + alternatives_text(m["alternatives"], f["keyword_baseline"])
     lines += ["", f"test templates: {', '.join(m['split']['test_templates'])}", ""]
     return "\n".join(lines)
 
@@ -288,6 +403,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cutoff", type=float, default=0.6,
                         help="confidence at or above which the app preselects the suggestion")
+    parser.add_argument("--skip-alternatives", action="store_true",
+                        help="do not tune and score the alternative models (quicker)")
     args = parser.parse_args()
 
     texts, labels, groups, provenance = load_corpus()
@@ -295,7 +412,8 @@ def main():
     model_version = MODEL_NAME + ("-draft" if draft else "")
     kinds = codebook()
 
-    metrics, report = evaluate(texts, labels, groups, kinds, model_version)
+    metrics, report = evaluate(texts, labels, groups, kinds, model_version,
+                               cutoff=args.cutoff, alternatives=not args.skip_alternatives)
     OUT.mkdir(exist_ok=True)
     (OUT / "categoriser_metrics.json").write_text(json.dumps(metrics, indent=1), encoding="utf-8")
     text = metrics_text(metrics, report)

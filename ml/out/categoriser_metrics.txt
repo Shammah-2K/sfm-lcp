@@ -49,4 +49,21 @@ confidence cutoff (within kind): share preselected, accuracy when preselected
   0.8: 0.3935  0.7449
   0.9: 0.2670  0.7897
 
+alternatives, same held-out templates (tuned by grouped CV on training templates only):
+  method              CV F1  test F1  in kind  preselected  accuracy   (preselection at cutoff 0.7)
+  keyword_baseline        -   0.3776        -            -         -
+  lr_char_shipped    0.5613   0.5028   0.5828       0.5212    0.7379
+  lr_char_tuned      0.5720   0.4940   0.5850       0.5363    0.7279
+  lr_word            0.5368   0.4329   0.4841       0.6627    0.6611
+  svm_char           0.5714   0.5303   0.5977            -         -
+  cnb_char           0.5531   0.5349   0.6044       0.3382    0.8366
+  mnb_word           0.5116   0.4097   0.4646       0.7436    0.6861
+  lr_char_shipped: TF-IDF char_wb 2-4 + logistic regression, C=4 (exported as lr-v2); fixed
+  lr_char_tuned: TF-IDF char_wb + logistic regression, n-grams and C tuned; C=4.0, ngram_range=[2, 5]
+  lr_word: TF-IDF words + logistic regression; C=16.0, ngram_range=[1, 1]
+  svm_char: TF-IDF char_wb 2-4 + linear SVM (no probabilities); C=1.0
+  cnb_char: TF-IDF char_wb 2-4 + Complement Naive Bayes; alpha=1.0
+  mnb_word: word counts + Multinomial Naive Bayes; alpha=0.03, ngram_range=[1, 1]
+  not evaluated: fastText, the small-language-model arm (see the dissertation)
+
 test templates: airtime_10, airtime_16, airtime_17, food_01, food_02, food_07, food_13, other_expense_10, other_income_02, other_income_03, other_income_07, other_income_12, other_income_15, other_income_16, rent_levy_02, rent_levy_05, rent_levy_11, rent_levy_14, sales_goods_07, sales_service_06, sales_service_07, sales_service_08, sales_service_10, sales_service_12, sales_service_17, sales_service_18, stock_01, stock_15, stock_16, transport_04, transport_07, transport_13, transport_15, transport_18, utilities_02, utilities_06, utilities_10, utilities_14, wages_08, wages_12
